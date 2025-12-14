@@ -108,7 +108,7 @@ const maxFileSize = 10 * 1024 * 1024
 
 func TestUploadHandler_ValidationScenarios(t *testing.T) {
 	cfg := config.Config{
-		Files: config.Files{MaxFilesPerRequest: 20, MaxFileSize: maxFileSize},
+		Files: config.Files{MaxFilesPerRequest: 20, MaxFileSize: 1024},
 	}
 	log := logger.NewLogger(cfg)
 	mockCache := NewMockCache()
@@ -238,7 +238,7 @@ func TestUploadHandler_ValidationScenarios(t *testing.T) {
 
 				part, _ := writer.CreateFormFile("files", "large.json")
 
-				largeContent := strings.Repeat(createFullJSON("student1", "2023-01-01"), 1000000)
+				largeContent := strings.Repeat(createFullJSON("student1", "2023-01-01"), 1024)
 				_, err := io.WriteString(part, largeContent)
 				if err != nil {
 					panic(err)
