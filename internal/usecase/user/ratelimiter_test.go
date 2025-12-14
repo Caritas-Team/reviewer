@@ -101,6 +101,28 @@ func (m *mockCache) Decrement(ctx context.Context, key string, value uint64) (ui
 	return newValue, nil
 }
 
+func (m *mockCache) Delete(ctx context.Context, key string) error {
+	if m.alwaysFail {
+		return errors.New("cache broken")
+	}
+	delete(m.storage, key)
+	return nil
+}
+
+func (m *mockCache) Ping() error {
+	if m.alwaysFail {
+		return errors.New("cache broken")
+	}
+	return nil
+}
+
+func (m *mockCache) IsEnabled() error {
+	if m.alwaysFail {
+		return errors.New("cache broken")
+	}
+	return nil
+}
+
 func (m *mockCache) Close() error {
 	return nil
 }
