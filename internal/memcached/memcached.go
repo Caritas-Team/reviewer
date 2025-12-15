@@ -24,7 +24,10 @@ type CacheInterface interface {
 	Set(ctx context.Context, key string, value []byte, ttl time.Duration) error
 	Increment(ctx context.Context, key string, value uint64) (uint64, error)
 	Decrement(ctx context.Context, key string, value uint64) (uint64, error)
+	Delete(ctx context.Context, key string) error
 	Close() error
+	Ping() error
+	IsEnabled() error
 }
 
 func NewCache(ctx context.Context, cfg config.Config) (*Cache, error) {
