@@ -17,6 +17,14 @@ type mockCache struct {
 	alwaysFail bool
 }
 
+func (m *mockCache) Delete(ctx context.Context, key string) error {
+	if m.alwaysFail {
+		return errors.New("cache broken")
+	}
+	delete(m.storage, key)
+	return nil
+}
+
 func newMockCache() *mockCache {
 	return &mockCache{
 		storage: make(map[string][]byte),

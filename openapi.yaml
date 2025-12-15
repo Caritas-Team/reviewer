@@ -1,0 +1,216 @@
+openapi: 3.0.3
+info:
+  title: Reviewer API
+  version: "1.0.0"
+  description: API for retrieving assessment processing results.
+
+servers:
+  - url: http://localhost:8080
+
+tags:
+  - name: Assessments
+    description: Endpoints for assessment processing results
+
+paths:
+  /v1/assessments/{request_id}:
+    get:
+      tags: [Assessments]
+      summary: Get assessment results by request_id
+      description: >
+        Returns the current processing status or final results.
+        If keep_in_cache is false (default), completed results are removed after successful retrieval.
+        If wait=true and the result is still processing, server MAY long-poll up to 30 seconds.
+      parameters:
+        - name: request_id
+          in: path
+          required: true
+          description: Request identifier (UUID).
+          schema:
+            type: string
+            format: uuid
+        - name: wait
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+        - name: keep_in_cache
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+
+      responses:
+        "200":
+          description: Processing status or final result
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/ProcessingStatus"
+                  - $ref: "#/components/schemas/CompletedResult"
+                  - $ref: "#/components/schemas/FailedResult"
+                discriminator:
+                  propertyName: status
+                  mapping:
+                    processing: "#/components/schemas/ProcessingStatus"
+                    completed: "#/components/schemas/CompletedResult"
+                    failed: "#/components/schemas/FailedResult"
+              examples:
+                processing:
+                  value:
+                    status: processing
+                    progress_percent: 35
+                    processed_students: 70
+                    total_students: 200
+                completed:
+                  value:
+                    status: completed
+                    results:
+                      - student_id: "123"
+                        diffs:
+                          - field: "score"
+                            expected: 5
+                            actual: 4
+                failed:
+                  value:
+                    status: failed
+                    error:
+                      message: "Internal processing error"
+                      details:
+                        reason: "timeout"
+
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                error:
+                  message: "Invalid request_id format"
+
+        "404":
+          description: Result not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                error:
+                  message: "Result not found"
+
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                error:
+                  message: "Internal server error"
+
+components:
+  schemas:
+    ErrorResponse:
+      type: object
+      required: [error]
+      additionalProperties: false
+      properties:
+        error:
+          type: object
+          required: [message]
+          additionalProperties: false
+          properties:
+            message:
+              type: string
+
+    ProcessingStatus:
+      type: object
+      required: [status, progress_percent, processed_students, total_students]
+      additionalProperties: false
+      properties:
+        status:
+          type: string
+          enum: [processing]
+        progress_percent:
+          type: integer
+          minimum: 0
+          maximum: 100
+        processed_students:
+          type: integer
+          minimum: 0
+        total_students:
+          type: integer
+          minimum: 0
+
+    CompletedResult:
+      type: object
+      required: [status, results]
+      additionalProperties: false
+      properties:
+        status:
+          type: string
+          enum: [completed]
+        results:
+          type: array
+          items:
+            $ref: "#/components/schemas/AssessmentDiff"
+
+    FailedResult:
+      type: object
+      required: [status, error]
+      additionalProperties: false
+      properties:
+        status:
+          type: string
+          enum: [failed]
+        error:
+          type: object
+          required: [message]
+          additionalProperties: true
+          properties:
+            message:
+              type: string
+            details:
+              type: object
+              additionalProperties: true
+
+    AssessmentDiff:
+      type: object
+      required: [student_id, diffs]
+      additionalProperties: false
+      properties:
+        student_id:
+          type: string
+        diffs:
+          type: array
+          items:
+            $ref: "#/components/schemas/FieldDiff"
+
+    FieldDiff:
+      type: object
+      required: [field, expected, actual]
+      additionalProperties: false
+      properties:
+        field:
+          type: string
+        expected:
+          nullable: true
+          oneOf:
+            - type: string
+            - type: number
+            - type: integer
+            - type: boolean
+            - type: object
+            - type: array
+        actual:
+          nullable: true
+          oneOf:
+            - type: string
+            - type: number
+            - type: integer
+            - type: boolean
+            - type: object
+            - type: array
