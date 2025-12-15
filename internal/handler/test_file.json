@@ -1,0 +1,47 @@
+{
+  "por01": "<div>2025-11-11</div>",
+  "por02": "<div>123</div>",
+  "por03": "<div>2025-12-24</div>",
+  "newAct01": {
+    "procNumElem": "16%"
+  },
+  "newAct02": {
+    "procNumElem": "0%"
+  },
+  "newAct03": {
+    "procNumElem": "0%"
+  },
+  "newAct04": {
+    "procNumElem": "0%"
+  },
+  "levelZoneZbr": "Фраза",
+  "diagramBlock": {
+    "predActProcNumElem": "34%",
+    "protActProcNumElem": "4%",
+    "protInitProcNumElem": "0%",
+    "golActProcNumElem": "2%",
+    "golInitProcNumElem": "33%",
+    "fraActProcNumElem": "1%",
+    "fraInitProcNumElem": "25%"
+  },
+  "basicDictionary": [
+    {
+      "colorStyle": "res-dict__item-viol",
+      "itemOffStyle": "",
+      "content": "что?"
+    },
+    {
+      "colorStyle": "res-dict__item-yellow",
+      "itemOffStyle": "res-dict__item-off",
+      "content": "я, мой"
+    },
+    {
+      "colorStyle": "res-dict__item-green",
+      "itemOffStyle": "res-dict__item-off",
+      "content": "хотеть"
+    }
+  ],
+  "dictBasicMore": [
+    "123"
+  ]
+}
