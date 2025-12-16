@@ -16,6 +16,7 @@ import (
 	"github.com/Caritas-Team/reviewer/internal/memcached"
 	"github.com/Caritas-Team/reviewer/internal/metrics"
 	"github.com/Caritas-Team/reviewer/internal/usecase/assessment"
+	"github.com/Caritas-Team/reviewer/internal/model"
 	"github.com/Caritas-Team/reviewer/internal/usecase/file"
 	"github.com/Caritas-Team/reviewer/internal/usecase/user"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
@@ -92,7 +93,15 @@ func main() {
 	// Экземпляр ReadinessChecker
 	checker := check.NewReadinessChecker(cache, rateLimiterMiddleware, log)
 
+	// Создаем канал для обработки
+	inputChan := make(chan []model.StudentPair, 100)
+
+	// Создаем обработчик загрузки
+	uploadHandler := handler.NewUploadHandler(cfg, log, cache, inputChan)
+
 	mux := http.NewServeMux()
+	mux.Handle("POST /v1/assessments/upload",
+		http.HandlerFunc(uploadHandler.UploadAssessmentsHandler))
 
 	// Эндпоинт для получения результатов обработки (GET /v1/assessments/{request_id})
 	mux.HandleFunc("/v1/assessments/", handler.GetAssessmentResultsHandler(resultStorage, log))

@@ -1,0 +1,23 @@
+{
+		"por01": "<div>2023-01-15</div>",
+		"por02": "<div>student123</div>",
+		"newAct01": {"procNumElem": "16%"},
+		"newAct02": {"procNumElem": "10%"},
+		"newAct03": {"procNumElem": "5%"},
+		"newAct04": {"procNumElem": "2%"},
+		"diagramBlock": {
+			"predActProcNumElem": "34%",
+			"protActProcNumElem": "4%",
+			"protInitProcNumElem": "0%",
+			"golActProcNumElem": "2%",
+			"golInitProcNumElem": "33%",
+			"fraActProcNumElem": "1%",
+			"fraInitProcNumElem": "25%"
+		},
+		"basicDictionary": [
+			{"colorStyle": "res-dict__item-viol", "itemOffStyle": "res-dict__item-off", "content": "что?"},
+			{"colorStyle": "res-dict__item-yellow", "itemOffStyle": "", "content": "я, мой"},
+			{"colorStyle": "res-dict__item-green", "itemOffStyle": "", "content": "хотеть"}
+		],
+		"dictBasicMore": ["слово1", "слово2"]
+	}

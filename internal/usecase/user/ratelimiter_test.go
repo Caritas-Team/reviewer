@@ -108,6 +108,23 @@ func (m *mockCache) Delete(ctx context.Context, key string) error {
 	return nil
 }
 
+<<<<<<< HEAD
+=======
+func (m *mockCache) Ping() error {
+	if m.alwaysFail {
+		return errors.New("cache broken")
+	}
+	return nil
+}
+
+func (m *mockCache) IsEnabled() error {
+	if m.alwaysFail {
+		return errors.New("cache broken")
+	}
+	return nil
+}
+
+>>>>>>> origin/feature/NS-49-assessments-get-results
 func (m *mockCache) Close() error {
 	return nil
 }

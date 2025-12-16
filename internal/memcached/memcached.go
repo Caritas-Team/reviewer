@@ -26,6 +26,8 @@ type CacheInterface interface {
 	Decrement(ctx context.Context, key string, value uint64) (uint64, error)
 	Delete(ctx context.Context, key string) error
 	Close() error
+	Ping() error
+	IsEnabled() error
 }
 
 func NewCache(ctx context.Context, cfg config.Config) (*Cache, error) {
