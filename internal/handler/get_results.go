@@ -1,13 +1,10 @@
 package handler
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
 	"strconv"
-	"strings"
-	"time"
 
 	"github.com/Caritas-Team/reviewer/internal/logger"
 	"github.com/Caritas-Team/reviewer/internal/usecase/assessment"
@@ -18,6 +15,23 @@ type ErrorResponse struct {
 	Error struct {
 		Message string `json:"message"`
 	} `json:"error"`
+}
+
+type AssessmentProcessingResponse struct {
+	Status            string `json:"status"`
+	ProgressPercent   int    `json:"progress_percent"`
+	ProcessedStudents int    `json:"processed_students"`
+	TotalStudents     int    `json:"total_students"`
+}
+
+type AssessmentCompletedResponse struct {
+	Status  string                      `json:"status"`
+	Results []assessment.AssessmentDiff `json:"results"`
+}
+
+type AssessmentFailedResponse struct {
+	Status string `json:"status"`
+	Error  any    `json:"error"`
 }
 
 func writeJSON(w http.ResponseWriter, code int, v any) {
@@ -43,21 +57,21 @@ func parseBoolQuery(r *http.Request, name string) (bool, error) {
 func respond(w http.ResponseWriter, res *assessment.ProcessingResult) {
 	switch res.Status {
 	case "processing":
-		writeJSON(w, http.StatusOK, map[string]any{
-			"status":             "processing",
-			"progress_percent":   res.ProgressPercent,
-			"processed_students": res.ProcessedStudents,
-			"total_students":     res.TotalStudents,
+		writeJSON(w, http.StatusOK, AssessmentProcessingResponse{
+			Status:            "processing",
+			ProgressPercent:   res.ProgressPercent,
+			ProcessedStudents: res.ProcessedStudents,
+			TotalStudents:     res.TotalStudents,
 		})
 	case "completed":
-		writeJSON(w, http.StatusOK, map[string]any{
-			"status":  "completed",
-			"results": res.Results,
+		writeJSON(w, http.StatusOK, AssessmentCompletedResponse{
+			Status:  "completed",
+			Results: res.Results,
 		})
 	case "failed":
-		writeJSON(w, http.StatusOK, map[string]any{
-			"status": "failed",
-			"error":  res.Error,
+		writeJSON(w, http.StatusOK, AssessmentFailedResponse{
+			Status: "failed",
+			Error:  res.Error,
 		})
 	default:
 		writeError(w, http.StatusInternalServerError, "Unknown status")
@@ -84,27 +98,13 @@ func GetAssessmentResultsHandler(storage *assessment.ResultStorage, log *logger.
 			return
 		}
 
-		const prefix = "/v1/assessments/"
-		path := r.URL.Path
-		if !strings.HasPrefix(path, prefix) {
-			writeError(w, http.StatusBadRequest, "Invalid path")
+		requestID := r.PathValue("request_id")
+		if requestID == "" {
+			writeError(w, http.StatusBadRequest, "Missing request_id")
 			return
 		}
-
-		requestID := strings.Trim(strings.TrimPrefix(path, prefix), "/")
-		if requestID == "" || strings.Contains(requestID, "/") {
-			writeError(w, http.StatusBadRequest, "Missing or invalid request_id")
-			return
-		}
-
 		if _, err := uuid.Parse(requestID); err != nil {
 			writeError(w, http.StatusBadRequest, "Invalid request_id format")
-			return
-		}
-
-		wait, err := parseBoolQuery(r, "wait")
-		if err != nil {
-			writeError(w, http.StatusBadRequest, "Invalid wait parameter")
 			return
 		}
 
@@ -119,44 +119,6 @@ func GetAssessmentResultsHandler(storage *assessment.ResultStorage, log *logger.
 		res, err := storage.Get(ctx, requestID)
 		if getOrWriteError(w, log, err, requestID) {
 			return
-		}
-
-		if wait && res.Status == "processing" {
-			lpCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
-			defer cancel()
-
-			ticker := time.NewTicker(300 * time.Millisecond)
-			defer ticker.Stop()
-
-			for {
-				select {
-				case <-lpCtx.Done():
-					respond(w, res)
-					return
-				case <-ticker.C:
-					tmp, err := storage.Get(lpCtx, requestID)
-					if errors.Is(err, assessment.ErrNotFound) {
-						writeError(w, http.StatusNotFound, "Result not found")
-						return
-					}
-					if err != nil {
-						log.Error("assessment results long poll get failed", "request_id", requestID, "err", err)
-						writeError(w, http.StatusInternalServerError, "Internal server error")
-						return
-					}
-
-					res = tmp
-					if res.Status != "processing" {
-						final, err := storage.GetAndDelete(ctx, requestID, keepInCache)
-						if getOrWriteError(w, log, err, requestID) {
-							return
-						}
-						res = final
-						respond(w, res)
-						return
-					}
-				}
-			}
 		}
 
 		if res.Status == "completed" || res.Status == "failed" {

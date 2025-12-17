@@ -17,7 +17,9 @@ import (
 	"github.com/Caritas-Team/reviewer/internal/logger"
 	"github.com/Caritas-Team/reviewer/internal/memcached"
 	"github.com/Caritas-Team/reviewer/internal/model"
+	"github.com/Caritas-Team/reviewer/internal/usecase/assessment"
 	"github.com/google/uuid"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -115,7 +117,8 @@ func TestUploadHandler_ValidationScenarios(t *testing.T) {
 
 	inputChan := make(chan []model.StudentPair, 10)
 
-	handler := NewUploadHandler(cfg, log, mockCache, inputChan)
+	resultStorage := assessment.NewResultStorage(mockCache)
+	handler := NewUploadHandler(cfg, log, mockCache, resultStorage, inputChan)
 
 	tests := []struct {
 		name           string
@@ -359,7 +362,8 @@ func TestUploadHandler_ErrorDetails(t *testing.T) {
 
 	inputChan := make(chan []model.StudentPair, 10)
 
-	handler := NewUploadHandler(cfg, log, mockCache, inputChan)
+	resultStorage := assessment.NewResultStorage(mockCache)
+	handler := NewUploadHandler(cfg, log, mockCache, resultStorage, inputChan)
 
 	tests := []struct {
 		name         string
@@ -453,7 +457,8 @@ func TestUploadHandler_SuccessfulUpload(t *testing.T) {
 	mockCache := NewMockCache()
 	inputChan := make(chan []model.StudentPair, 10)
 
-	handler := NewUploadHandler(cfg, log, mockCache, inputChan)
+	resultStorage := assessment.NewResultStorage(mockCache)
+	handler := NewUploadHandler(cfg, log, mockCache, resultStorage, inputChan)
 
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
@@ -541,7 +546,8 @@ func TestUploadHandler_Idempotency(t *testing.T) {
 	mockCache := NewMockCache()
 	inputChan := make(chan []model.StudentPair, 10)
 
-	handler := NewUploadHandler(cfg, log, mockCache, inputChan)
+	resultStorage := assessment.NewResultStorage(mockCache)
+	handler := NewUploadHandler(cfg, log, mockCache, resultStorage, inputChan)
 
 	requestID := uuid.New().String()
 

@@ -14,6 +14,7 @@ import (
 	"github.com/Caritas-Team/reviewer/internal/logger"
 	"github.com/Caritas-Team/reviewer/internal/memcached"
 	"github.com/Caritas-Team/reviewer/internal/model"
+	"github.com/Caritas-Team/reviewer/internal/usecase/assessment"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -35,7 +36,8 @@ func TestIntegration_RealFileParsing(t *testing.T) {
 	mockCache := NewMockCache()
 	inputChan := make(chan []model.StudentPair, 10)
 
-	handler := NewUploadHandler(cfg, log, mockCache, inputChan)
+	resultStorage := assessment.NewResultStorage(mockCache)
+	handler := NewUploadHandler(cfg, log, mockCache, resultStorage, inputChan)
 
 	receivedData := make(chan []model.StudentPair, 1)
 	go func() {

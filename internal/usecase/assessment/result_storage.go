@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"strings"
+	"time"
 
 	"github.com/Caritas-Team/reviewer/internal/memcached"
 	"github.com/bradfitz/gomemcache/memcache"
@@ -40,10 +41,27 @@ func NewResultStorage(cache memcached.CacheInterface) *ResultStorage {
 	return &ResultStorage{cache: cache}
 }
 
+func (s *ResultStorage) Set(ctx context.Context, requestID string, res *ProcessingResult, ttl time.Duration) error {
+	if res == nil {
+		return errors.New("nil result")
+	}
+	if res.Status == "" {
+		return errors.New("empty status")
+	}
+
+	b, err := json.Marshal(res)
+	if err != nil {
+		return err
+	}
+
+	return s.cache.Set(ctx, requestID, b, ttl)
+}
+
 func (s *ResultStorage) Get(ctx context.Context, requestID string) (*ProcessingResult, error) {
 	b, err := s.cache.Get(ctx, requestID)
 	if err != nil {
-		if errors.Is(err, memcached.ErrCacheMiss) || errors.Is(err, memcache.ErrCacheMiss) || strings.Contains(strings.ToLower(err.Error()), "cache miss") {
+		if errors.Is(err, memcached.ErrCacheMiss) || errors.Is(err, memcache.ErrCacheMiss) ||
+			strings.Contains(strings.ToLower(err.Error()), "cache miss") {
 			return nil, ErrNotFound
 		}
 		return nil, err
@@ -62,7 +80,8 @@ func (s *ResultStorage) Get(ctx context.Context, requestID string) (*ProcessingR
 func (s *ResultStorage) GetAndDelete(ctx context.Context, requestID string, keepInCache bool) (*ProcessingResult, error) {
 	b, err := s.cache.Get(ctx, requestID)
 	if err != nil {
-		if errors.Is(err, memcached.ErrCacheMiss) || errors.Is(err, memcache.ErrCacheMiss) || strings.Contains(strings.ToLower(err.Error()), "cache miss") {
+		if errors.Is(err, memcached.ErrCacheMiss) || errors.Is(err, memcache.ErrCacheMiss) ||
+			strings.Contains(strings.ToLower(err.Error()), "cache miss") {
 			return nil, ErrNotFound
 		}
 		return nil, err
