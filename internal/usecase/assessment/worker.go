@@ -12,6 +12,8 @@ type PairProcessor interface {
 	Process(ctx context.Context, pair model.StudentPair) (AssessmentDiff, error)
 }
 
+// Worker читает из канала пачки StudentPair одного request_id и обновляет статус в ResultStorage.
+// Handler должен быть "тупым": только читает из storage и отдает ответ; все смены статусов происходят здесь.
 type Worker struct {
 	log       *logger.Logger
 	storage   *ResultStorage
