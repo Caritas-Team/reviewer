@@ -107,6 +107,8 @@ func main() {
 	mux.Handle("GET /v1/assessments/{request_id}",
 		handler.GetAssessmentResultsHandler(resultStorage, log))
 
+	mux.HandleFunc("/v1/assessments/", handler.GetAssessmentResultsHandler(resultStorage, log))
+
 	// Эндпоинт для health check
 	mux.HandleFunc("/health", check.HealthCheckHandler(cache, log, 29*time.Second)) // Тайминг можно настроить
 

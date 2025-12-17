@@ -5,11 +5,14 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/Caritas-Team/reviewer/internal/logger"
 	"github.com/Caritas-Team/reviewer/internal/usecase/assessment"
 	"github.com/google/uuid"
 )
+
+const assessmentsPrefix = "/v1/assessments/"
 
 type ErrorResponse struct {
 	Error struct {
@@ -32,6 +35,22 @@ type AssessmentCompletedResponse struct {
 type AssessmentFailedResponse struct {
 	Status string `json:"status"`
 	Error  any    `json:"error"`
+}
+
+func extractRequestID(r *http.Request) string {
+	if v := r.PathValue("request_id"); v != "" {
+		return v
+	}
+	path := r.URL.Path
+	if !strings.HasPrefix(path, assessmentsPrefix) {
+		return ""
+	}
+	v := strings.TrimPrefix(path, assessmentsPrefix)
+	v = strings.Trim(v, "/")
+	if i := strings.IndexByte(v, '/'); i >= 0 {
+		return ""
+	}
+	return v
 }
 
 func writeJSON(w http.ResponseWriter, code int, v any) {
@@ -98,7 +117,7 @@ func GetAssessmentResultsHandler(storage *assessment.ResultStorage, log *logger.
 			return
 		}
 
-		requestID := r.PathValue("request_id")
+		requestID := extractRequestID(r)
 		if requestID == "" {
 			writeError(w, http.StatusBadRequest, "Missing request_id")
 			return
