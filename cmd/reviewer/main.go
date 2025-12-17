@@ -16,7 +16,6 @@ import (
 	"github.com/Caritas-Team/reviewer/internal/memcached"
 	"github.com/Caritas-Team/reviewer/internal/metrics"
 	"github.com/Caritas-Team/reviewer/internal/model"
-	"github.com/Caritas-Team/reviewer/internal/usecase/file"
 	"github.com/Caritas-Team/reviewer/internal/usecase/user"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel"
@@ -70,21 +69,6 @@ func main() {
 
 	rateLimiter := user.NewRateLimiter(cache, cfg)
 	rateLimiterMiddleware := handler.NewRateLimiterMiddleware(rateLimiter)
-
-	fileCleaner := file.NewFileCleaner(log, cache)
-
-	go func() {
-		ticker := time.NewTicker(1 * time.Minute)
-		defer ticker.Stop()
-
-		for range ticker.C {
-			if err := fileCleaner.DeleteDownloadedFiles(ctx); err != nil {
-				log.Error("file cleaner delete error", "err", err)
-			} else {
-				log.Info("file cleaner deleted successfully")
-			}
-		}
-	}()
 
 	// Экземпляр ReadinessChecker
 	checker := check.NewReadinessChecker(cache, rateLimiterMiddleware, log)
