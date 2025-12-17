@@ -45,13 +45,7 @@ type UploadHandler struct {
 	parser       *file.DocumentParser
 }
 
-func NewUploadHandler(
-	cfg config.Config,
-	log *logger.Logger,
-	cache memcached.CacheInterface,
-	results *assessment.ResultStorage,
-	inputChan chan<- []model.StudentPair,
-) *UploadHandler {
+func NewUploadHandler(cfg config.Config, log *logger.Logger, cache memcached.CacheInterface, results *assessment.ResultStorage, inputChan chan<- []model.StudentPair) *UploadHandler {
 	return &UploadHandler{
 		cfg:          cfg,
 		log:          log,
@@ -258,6 +252,13 @@ func (h *UploadHandler) UploadAssessmentsHandler(w http.ResponseWriter, r *http.
 			map[string]any{"error": err.Error()})
 		return
 	}
+
+	_ = h.results.Set(ctx, requestID, &assessment.ProcessingResult{
+		Status:            "processing",
+		ProgressPercent:   0,
+		ProcessedStudents: 0,
+		TotalStudents:     len(studentPairs),
+	}, time.Hour)
 
 	// Отправляем в канал обработки
 	h.sendToProcessingChannel(ctx, studentPairs)

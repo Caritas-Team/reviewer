@@ -99,6 +99,10 @@ func main() {
 	// Создаем обработчик загрузки
 	uploadHandler := handler.NewUploadHandler(cfg, log, cache, resultStorage, inputChan)
 
+	processor := assessment.StubProcessor{}
+	w := assessment.NewWorker(log, resultStorage, processor, time.Hour)
+	go w.Run(rootCtx, inputChan)
+
 	mux := http.NewServeMux()
 	mux.Handle("POST /v1/assessments/upload",
 		http.HandlerFunc(uploadHandler.UploadAssessmentsHandler))
