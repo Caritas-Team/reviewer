@@ -61,15 +61,23 @@ type Jaeger struct {
 	Endpoint string `yaml:"endpoint"`
 }
 
+// PipelineConfig - конфигурация пайплайна
+type PipelineConfig struct {
+	WorkerPoolSize   int `mapstructure:"worker_pool_size"`   // Количество воркеров
+	InputBufferSize  int `mapstructure:"input_buffer_size"`  // Размер буфера входящего канала
+	ResultBufferSize int `mapstructure:"result_buffer_size"` // Размер буфера канала результатов
+}
+
 type Config struct {
-	Server      Server      `mapstructure:"server"`
-	CORS        CORS        `mapstructure:"cors"`
-	RateLimiter RateLimiter `mapstructure:"rate_limiter"`
-	Memcached   Memcached   `mapstructure:"memcached"`
-	Files       Files       `mapstructure:"files"`
-	Metrics     Metrics     `mapstructure:"metrics"`
-	Logging     Logging     `mapstructure:"logging"`
-	Jaeger      Jaeger      `yaml:"jaeger"`
+	Server      Server         `mapstructure:"server"`
+	CORS        CORS           `mapstructure:"cors"`
+	RateLimiter RateLimiter    `mapstructure:"rate_limiter"`
+	Memcached   Memcached      `mapstructure:"memcached"`
+	Files       Files          `mapstructure:"files"`
+	Metrics     Metrics        `mapstructure:"metrics"`
+	Logging     Logging        `mapstructure:"logging"`
+	Jaeger      Jaeger         `yaml:"jaeger"`
+	Pipeline    PipelineConfig `mapstructure:"pipeline"`
 }
 
 func Load() (Config, error) {

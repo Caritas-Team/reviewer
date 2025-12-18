@@ -59,3 +59,22 @@ type StudentPair struct {
 	Before    *AssessmentDocument `json:"before"`
 	After     *AssessmentDocument `json:"after"`
 }
+
+// ProcessingResult - результат обработки пары документов
+type ProcessingResult struct {
+	RequestID         string                 `json:"request_id"`              // ID запроса
+	Status            string                 `json:"status"`                  // Текущий статус обработки (processing, completed, failed)
+	ErrorMessage      string                 `json:"error_message,omitempty"` // Сообщение об ошибке, если возникли проблемы
+	ProcessedStudents int                    `json:"processed_students"`      // Количество обработанных учеников
+	TotalStudents     int                    `json:"total_students"`          // Общее число учеников
+	ResultDetails     map[string]interface{} `json:"result_details"`          // Подробности расчёта
+	Errors            map[string]string      `json:"errors,omitempty"`        // Карта ошибок (ключ - StudentID, значение - сообщение об ошибке)
+	CreatedAt         time.Time              `json:"created_at"`              // Время создания результата
+}
+
+// ProcessingError - структура ошибки обработки
+type ProcessingError struct {
+	RequestID string `json:"request_id"` // ID запроса
+	StudentID string `json:"student_id"` // ID студента
+	Message   string `json:"message"`    // Сообщение об ошибке
+}
