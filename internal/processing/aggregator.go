@@ -1,6 +1,7 @@
 package processing
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/Caritas-Team/reviewer/internal/logger"
@@ -40,7 +41,12 @@ func ResultAggregator(resultChan <-chan model.ProcessingResult, errorChan <-chan
 func updateAggregatedResult(currentResult, newResult model.ProcessingResult) {
 	// Объединяем результаты
 	currentResult.ProcessedStudents += newResult.ProcessedStudents
-	currentResult.ResultDetails[newResult.RequestID] = newResult.ResultDetails
+
+	// Генерация уникального ключа для нового результата
+	key := fmt.Sprintf("diff%d", len(currentResult.ResultDetails)+1)
+
+	// Добавляем новые данные под уникальным ключом
+	currentResult.ResultDetails[key] = newResult.ResultDetails
 }
 
 // checkCompletion проверяет, завершил ли запрос обработку
