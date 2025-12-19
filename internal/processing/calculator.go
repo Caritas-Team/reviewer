@@ -48,13 +48,14 @@ type GeneralProgress struct {
 }
 
 // Calculate вычисляет различия между двумя документами
-func (dc *DiffCalculator) Calculate(before, after *model.AssessmentDocument) (*AssessmentDiff, error) {
+func (dc *DiffCalculator) Calculate(before, after *model.AssessmentDocument) (AssessmentDiff, error) {
+
 	if before == nil || after == nil {
-		return nil, fmt.Errorf("both documents are required")
+		return AssessmentDiff{}, fmt.Errorf("both documents are required")
 	}
 
 	// Создаем структуру для различий и заполняем метаданные
-	diff := &AssessmentDiff{
+	diff := AssessmentDiff{
 		StudentID:   before.Metadata.StudentID,
 		PeriodStart: before.Metadata.Date.Format("2006-01-02"),
 		PeriodEnd:   after.Metadata.Date.Format("2006-01-02"),
@@ -78,20 +79,20 @@ func (dc *DiffCalculator) Calculate(before, after *model.AssessmentDocument) (*A
 // compareLanguageDevelopment сравнивает уровни языкового развития
 func (dc *DiffCalculator) compareLanguageDevelopment(before, after model.LanguageDevelopment) LangDevDiff {
 	return LangDevDiff{
-		PreintentionalDelta: after.Preintentional.Activity - before.Preintentional.Activity,
-		ProtolanguageDelta:  after.Protolanguage.Activity - before.Protolanguage.Activity,
-		HolophraseDelta:     after.Holophrase.Activity - before.Holophrase.Activity,
-		PhraseDelta:         after.Phrase.Activity - before.Phrase.Activity,
+		PreintentionalDelta: float64(after.Preintentional.Activity - before.Preintentional.Activity),
+		ProtolanguageDelta:  float64(after.Protolanguage.Activity - before.Protolanguage.Activity),
+		HolophraseDelta:     float64(after.Holophrase.Activity - before.Holophrase.Activity),
+		PhraseDelta:         float64(after.Phrase.Activity - before.Phrase.Activity),
 	}
 }
 
 // compareCommunicativeFunctions сравнивает коммуникативные функции
 func (dc *DiffCalculator) compareCommunicativeFunctions(before, after model.CommunicativeFunctions) CommFuncsDiff {
 	return CommFuncsDiff{
-		ControlDelta:             after.Control - before.Control,
-		ObtainingDesiredDelta:    after.ObtainingDesired - before.ObtainingDesired,
-		SocialInteractionDelta:   after.SocialInteraction - before.SocialInteraction,
-		InformationExchangeDelta: after.InformationExchange - before.InformationExchange,
+		ControlDelta:             float64(after.Control - before.Control),
+		ObtainingDesiredDelta:    float64(after.ObtainingDesired - before.ObtainingDesired),
+		SocialInteractionDelta:   float64(after.SocialInteraction - before.SocialInteraction),
+		InformationExchangeDelta: float64(after.InformationExchange - before.InformationExchange),
 	}
 }
 
