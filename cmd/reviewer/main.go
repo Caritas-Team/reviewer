@@ -18,7 +18,6 @@ import (
 	"github.com/Caritas-Team/reviewer/internal/model"
 	"github.com/Caritas-Team/reviewer/internal/processing"
 	"github.com/Caritas-Team/reviewer/internal/storage"
-	"github.com/Caritas-Team/reviewer/internal/usecase/file"
 	"github.com/Caritas-Team/reviewer/internal/usecase/user"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel"
