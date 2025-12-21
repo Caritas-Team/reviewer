@@ -27,10 +27,10 @@ func TestResultAggregator_Success(t *testing.T) {
 			Format: "json",
 		},
 		Memcached: config.Memcached{
-			Enable:     true,
-			Servers:    []string{"127.0.0.1:11211"}, // Адрес мем-кеша
-			DefaultTTL: 3600,                        // Срок хранения по умолчанию
-			KeyPrefix:  "pdf_api",                   // Префикс ключей
+			Enable: false,
+			// Servers:    []string{"memcahced:11211"}, // Адрес мем-кеша
+			// DefaultTTL: 3600,                        // Срок хранения по умолчанию
+			// KeyPrefix:  "pdf_api",                   // Префикс ключей
 		},
 	}
 

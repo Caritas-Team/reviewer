@@ -24,6 +24,16 @@ type ResultStorage struct {
 
 // NewResultStorage создаёт новое хранилище результатов
 func NewResultStorage(config config.Config, log *logger.Logger) (*ResultStorage, error) {
+	rs := &ResultStorage{
+		results: make(map[string]model.ProcessingResult),
+		config:  config,
+		log:     log,
+	}
+
+	if !config.Memcached.Enable {
+		return rs, nil
+	}
+
 	cache, err := memcached.NewCache(context.TODO(), config)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize memcached: %w", err)
@@ -46,6 +56,9 @@ func (rs *ResultStorage) Set(requestID string, result model.ProcessingResult) er
 	rs.results[requestID] = result
 
 	// Сохраняем результат в мем-кеше
+	if !rs.config.Memcached.Enable || rs.memcachedClient == nil {
+		return nil
+	}
 	value, err := serialize(result)
 	if err != nil {
 		return fmt.Errorf("serialization error: %w", err)
@@ -71,6 +84,10 @@ func (rs *ResultStorage) Get(requestID string) (model.ProcessingResult, bool) {
 	rs.lock.RUnlock()
 	if exists {
 		return result, true
+	}
+
+	if !rs.config.Memcached.Enable || rs.memcachedClient == nil {
+		return model.ProcessingResult{}, false
 	}
 
 	value, err := rs.memcachedClient.Get(context.TODO(), requestID)
@@ -106,6 +123,10 @@ func (rs *ResultStorage) UpdateStatus(requestID, status string) error {
 	rs.results[requestID] = result
 	rs.lock.Unlock()
 
+	if !rs.config.Memcached.Enable || rs.memcachedClient == nil {
+		return nil
+	}
+
 	value, err := serialize(result)
 	if err != nil {
 		return fmt.Errorf("serialization error: %w", err)
@@ -134,6 +155,10 @@ func (rs *ResultStorage) UpdateProgress(requestID string, progress int) error {
 	rs.results[requestID] = result
 	rs.lock.Unlock()
 
+	if !rs.config.Memcached.Enable || rs.memcachedClient == nil {
+		return nil
+	}
+
 	value, err := serialize(result)
 	if err != nil {
 		return fmt.Errorf("serialization error: %w", err)
@@ -154,6 +179,10 @@ func (rs *ResultStorage) UpdateProgress(requestID string, progress int) error {
 func (rs *ResultStorage) Delete(requestID string) error {
 	rs.lock.Lock()
 	defer rs.lock.Unlock()
+
+	if !rs.config.Memcached.Enable || rs.memcachedClient == nil {
+		return nil
+	}
 
 	delete(rs.results, requestID) // Удаляем без предварительной проверки
 
