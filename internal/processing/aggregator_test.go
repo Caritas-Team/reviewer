@@ -27,7 +27,7 @@ func TestResultAggregator_Success(t *testing.T) {
 		},
 		Memcached: config.Memcached{
 			Enable:     true,
-			Servers:    []string{"memcached:11211"}, // Адрес мем-кеша
+			Servers:    []string{"127.0.0.1:11211"}, // Адрес мем-кеша
 			DefaultTTL: 3600,                        // Срок хранения по умолчанию
 			KeyPrefix:  "pdf_api",                   // Префикс ключей
 		},

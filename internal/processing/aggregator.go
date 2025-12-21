@@ -23,14 +23,20 @@ func ResultAggregator(
 
 			if exists {
 				updateAggregatedResult(&currentResult, result)
-				resultStorage.Set(result.RequestID, currentResult)
+				if err := resultStorage.Set(result.RequestID, currentResult); err != nil {
+					log.Error("Failed to persist aggregated result for request %s: %v", result.RequestID, err)
+					continue
+				}
 			} else {
 				if result.ResultDetails == nil {
 					result.ResultDetails = map[string]interface{}{}
 				}
 				normalizeDiffKeys(&result)
 				result.CreatedAt = time.Now()
-				resultStorage.Set(result.RequestID, result)
+				if err := resultStorage.Set(result.RequestID, result); err != nil {
+					log.Error("Failed to persist initial result for request %s: %v", result.RequestID, err)
+					continue
+				}
 			}
 
 			checkCompletion(resultStorage, result.RequestID, log)
@@ -61,7 +67,6 @@ func updateAggregatedResult(current *model.ProcessingResult, newResult model.Pro
 	key := fmt.Sprintf("diff%d", next)
 	current.ResultDetails[key] = payload
 
-	// Если вдруг TotalStudents не был установлен в первой записи
 	if current.TotalStudents == 0 {
 		current.TotalStudents = newResult.TotalStudents
 	}
@@ -70,46 +75,62 @@ func updateAggregatedResult(current *model.ProcessingResult, newResult model.Pro
 // checkCompletion проверяет, завершил ли запрос обработку
 func checkCompletion(resultStorage *storage.ResultStorage, requestID string, log *logger.Logger) {
 	result, exists := resultStorage.Get(requestID)
-	if exists {
-		if result.ProcessedStudents == result.TotalStudents {
-			// Все пары обработаны, проверяем наличие ошибок
-			if len(result.Errors) > 0 {
-				// Если есть ошибки, меняем статус на "failed"
-				resultStorage.UpdateStatus(requestID, "failed")
-				log.Error("Request %s failed due to previous errors", requestID)
-			} else {
-				// Если ошибок нет, меняем статус на "completed"
-				resultStorage.UpdateStatus(requestID, "completed")
-				log.Info("Request %s completed successfully", requestID)
-			}
-		}
+	if !exists {
+		return
 	}
+
+	if result.ProcessedStudents != result.TotalStudents {
+		return
+	}
+
+	if len(result.Errors) > 0 {
+		if err := resultStorage.UpdateStatus(requestID, "failed"); err != nil {
+			log.Error("Failed to update status to failed for request %s: %v", requestID, err)
+			return
+		}
+		log.Error("Request %s failed due to previous errors", requestID)
+		return
+	}
+
+	if err := resultStorage.UpdateStatus(requestID, "completed"); err != nil {
+		log.Error("Failed to update status to completed for request %s: %v", requestID, err)
+		return
+	}
+	log.Info("Request %s completed successfully", requestID)
 }
 
 // processError обрабатывает ошибку
 func processError(resultStorage *storage.ResultStorage, err model.ProcessingError, log *logger.Logger) {
-	// Логируем ошибку
 	log.Error("Error during processing: %s", err.Message)
 
-	// Получаем текущий результат по request_id
 	currentResult, exists := resultStorage.Get(err.RequestID)
 
 	if exists {
-		// Добавляем ошибку в список ошибок
-		currentResult.Errors[err.StudentID] = err.Message // Правильно используем карту
-		resultStorage.Set(err.RequestID, currentResult)
-		log.Error("Adding error to list for request %s", err.RequestID)
-	} else {
-		// Если результат не найден, создаём новый с ошибкой
-		failedResult := model.ProcessingResult{
-			RequestID: err.RequestID,
-			Status:    "processing",
-			Errors:    map[string]string{err.StudentID: err.Message}, // Правильно инициализируем карту
-			CreatedAt: time.Now(),
+		if currentResult.Errors == nil {
+			currentResult.Errors = map[string]string{}
 		}
-		resultStorage.Set(err.RequestID, failedResult)
-		log.Error("Creating new result with error for request %s", err.RequestID)
+		currentResult.Errors[err.StudentID] = err.Message
+
+		if e := resultStorage.Set(err.RequestID, currentResult); e != nil {
+			log.Error("Failed to persist error for request %s: %v", err.RequestID, e)
+			return
+		}
+		log.Error("Adding error to list for request %s", err.RequestID)
+		return
 	}
+
+	failedResult := model.ProcessingResult{
+		RequestID: err.RequestID,
+		Status:    "processing",
+		Errors:    map[string]string{err.StudentID: err.Message},
+		CreatedAt: time.Now(),
+	}
+
+	if e := resultStorage.Set(err.RequestID, failedResult); e != nil {
+		log.Error("Failed to create new result with error for request %s: %v", err.RequestID, e)
+		return
+	}
+	log.Error("Creating new result with error for request %s", err.RequestID)
 }
 
 func normalizeDiffKeys(r *model.ProcessingResult) {
