@@ -2,6 +2,7 @@ package processing
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -42,9 +43,11 @@ func TestResultAggregator_Success(t *testing.T) {
 		t.Fatalf("Failed to create result storage: %v", err)
 	}
 
+	reqID := fmt.Sprintf("test-request-%d", time.Now().UnixNano())
+
 	// Создаем результаты для тестирования
 	result1 := model.ProcessingResult{
-		RequestID:         "test-request",
+		RequestID:         reqID,
 		Status:            "processing",
 		ProcessedStudents: 1,
 		TotalStudents:     2,
@@ -78,7 +81,7 @@ func TestResultAggregator_Success(t *testing.T) {
 	}
 
 	result2 := model.ProcessingResult{
-		RequestID:         "test-request",
+		RequestID:         reqID,
 		Status:            "processing",
 		ProcessedStudents: 1,
 		TotalStudents:     2,
@@ -124,7 +127,7 @@ func TestResultAggregator_Success(t *testing.T) {
 	deadline := time.Now().Add(5 * time.Second)
 
 	for time.Now().Before(deadline) {
-		r, ok := realStorage.Get("test-request")
+		r, ok := realStorage.Get(reqID)
 		if ok && r.Status == "completed" {
 			finalResult = r
 			break
