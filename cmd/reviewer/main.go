@@ -73,21 +73,6 @@ func main() {
 	rateLimiter := user.NewRateLimiter(cache, cfg)
 	rateLimiterMiddleware := handler.NewRateLimiterMiddleware(rateLimiter)
 
-	fileCleaner := file.NewFileCleaner(log, cache)
-
-	go func() {
-		ticker := time.NewTicker(1 * time.Minute)
-		defer ticker.Stop()
-
-		for range ticker.C {
-			if err := fileCleaner.DeleteDownloadedFiles(ctx); err != nil {
-				log.Error("file cleaner delete error", "err", err)
-			} else {
-				log.Info("file cleaner deleted successfully")
-			}
-		}
-	}()
-
 	// Экземпляр ReadinessChecker
 	checker := check.NewReadinessChecker(cache, rateLimiterMiddleware, log)
 
