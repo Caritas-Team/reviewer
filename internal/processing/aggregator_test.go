@@ -111,6 +111,7 @@ func TestResultAggregator_Success(t *testing.T) {
 		CreatedAt: time.Now(),
 	}
 
+	expectedDiff := result1.ResultDetails["diff"].(AssessmentDiff)
 	// Запускаем аггрегатор
 	go ResultAggregator(resultChan, errorChan, realStorage, testLogger)
 
@@ -118,132 +119,83 @@ func TestResultAggregator_Success(t *testing.T) {
 	resultChan <- result1
 	resultChan <- result2
 
-	// Ждём завершения
-	time.Sleep(500 * time.Millisecond)
+	// Ждём, пока статус станет completed
+	var finalResult model.ProcessingResult
+	deadline := time.Now().Add(5 * time.Second)
 
-	// Проверяем результат
-	finalResult, exists := realStorage.Get("test-request")
-	if !exists {
-		t.Fatalf("Result not found")
-	}
-
-	expectedResult := model.ProcessingResult{
-		RequestID:         "test-request",
-		Status:            "completed",
-		ProcessedStudents: 2,
-		TotalStudents:     2,
-		ResultDetails: map[string]interface{}{
-			"diff1": AssessmentDiff{
-				StudentID:   "S12345",
-				PeriodStart: "2025-12-18",
-				PeriodEnd:   "2025-12-19",
-				LangDevDiff: LangDevDiff{
-					PreintentionalDelta: 10.5,
-					ProtolanguageDelta:  10,
-					HolophraseDelta:     10,
-					PhraseDelta:         10,
-				},
-				CommFuncsDiff: CommFuncsDiff{
-					ControlDelta:             10,
-					ObtainingDesiredDelta:    10,
-					SocialInteractionDelta:   10,
-					InformationExchangeDelta: 10,
-				},
-				VocabularyDiff: VocabularyDiff{
-					ActiveWordsDelta: 20,
-					TotalWordsDelta:  40,
-				},
-				GeneralProgress: GeneralProgress{
-					AverageProgress: 10.0625,
-				},
-			},
-			"diff2": AssessmentDiff{
-				StudentID:   "S12345",
-				PeriodStart: "2025-12-18",
-				PeriodEnd:   "2025-12-19",
-				LangDevDiff: LangDevDiff{
-					PreintentionalDelta: 10.5,
-					ProtolanguageDelta:  10,
-					HolophraseDelta:     10,
-					PhraseDelta:         10,
-				},
-				CommFuncsDiff: CommFuncsDiff{
-					ControlDelta:             10,
-					ObtainingDesiredDelta:    10,
-					SocialInteractionDelta:   10,
-					InformationExchangeDelta: 10,
-				},
-				VocabularyDiff: VocabularyDiff{
-					ActiveWordsDelta: 20,
-					TotalWordsDelta:  40,
-				},
-				GeneralProgress: GeneralProgress{
-					AverageProgress: 10.0625,
-				},
-			},
-		},
-		CreatedAt: time.Now(),
+	for time.Now().Before(deadline) {
+		r, ok := realStorage.Get("test-request")
+		if ok && r.Status == "completed" {
+			finalResult = r
+			break
+		}
+		time.Sleep(5 * time.Millisecond)
 	}
 
-	// Проверяем поля результата
-	if finalResult.RequestID != expectedResult.RequestID {
-		t.Fatalf("RequestID mismatch: got %s, want %s", finalResult.RequestID, expectedResult.RequestID)
-	}
-	if finalResult.Status != expectedResult.Status {
-		t.Fatalf("Status mismatch: got %s, want %s", finalResult.Status, expectedResult.Status)
-	}
-	if finalResult.ProcessedStudents != expectedResult.ProcessedStudents {
-		t.Fatalf("ProcessedStudents mismatch: got %d, want %d", finalResult.ProcessedStudents, expectedResult.ProcessedStudents)
-	}
-	if finalResult.TotalStudents != expectedResult.TotalStudents {
-		t.Fatalf("TotalStudents mismatch: got %d, want %d", finalResult.TotalStudents, expectedResult.TotalStudents)
+	if finalResult.RequestID == "" {
+		t.Fatalf("Result not completed in time")
 	}
 
-	// Проверяем ResultDetails вручную
-	expectedDetails := expectedResult.ResultDetails["diff"].(AssessmentDiff)
-	finalDetails := finalResult.ResultDetails["diff"].(AssessmentDiff)
-
-	if expectedDetails.StudentID != finalDetails.StudentID {
-		t.Fatalf("StudentID mismatch: got %s, want %s", finalDetails.StudentID, expectedDetails.StudentID)
+	if finalResult.Status != "completed" {
+		t.Fatalf("Status mismatch: got %s, want completed", finalResult.Status)
 	}
-	if expectedDetails.PeriodStart != finalDetails.PeriodStart {
-		t.Fatalf("PeriodStart mismatch: got %s, want %s", finalDetails.PeriodStart, expectedDetails.PeriodStart)
+	if finalResult.ProcessedStudents != 2 {
+		t.Fatalf("ProcessedStudents mismatch: got %d, want 2", finalResult.ProcessedStudents)
 	}
-	if expectedDetails.PeriodEnd != finalDetails.PeriodEnd {
-		t.Fatalf("PeriodEnd mismatch: got %s, want %s", finalDetails.PeriodEnd, expectedDetails.PeriodEnd)
+	if finalResult.TotalStudents != 2 {
+		t.Fatalf("TotalStudents mismatch: got %d, want 2", finalResult.TotalStudents)
 	}
-
-	// Проверяем LangDevDiff
-	if expectedDetails.LangDevDiff.PreintentionalDelta != finalDetails.LangDevDiff.PreintentionalDelta ||
-		expectedDetails.LangDevDiff.ProtolanguageDelta != finalDetails.LangDevDiff.ProtolanguageDelta ||
-		expectedDetails.LangDevDiff.HolophraseDelta != finalDetails.LangDevDiff.HolophraseDelta ||
-		expectedDetails.LangDevDiff.PhraseDelta != finalDetails.LangDevDiff.PhraseDelta {
-		t.Fatalf("LangDevDiff mismatch: got %+v, want %+v", finalDetails.LangDevDiff, expectedDetails.LangDevDiff)
+	if finalResult.CreatedAt.IsZero() {
+		t.Fatalf("CreatedAt should be set")
 	}
 
-	// Проверяем CommFuncsDiff
-	if expectedDetails.CommFuncsDiff.ControlDelta != finalDetails.CommFuncsDiff.ControlDelta ||
-		expectedDetails.CommFuncsDiff.ObtainingDesiredDelta != finalDetails.CommFuncsDiff.ObtainingDesiredDelta ||
-		expectedDetails.CommFuncsDiff.SocialInteractionDelta != finalDetails.CommFuncsDiff.SocialInteractionDelta ||
-		expectedDetails.CommFuncsDiff.InformationExchangeDelta != finalDetails.CommFuncsDiff.InformationExchangeDelta {
-		t.Fatalf("CommFuncsDiff mismatch: got %+v, want %+v", finalDetails.CommFuncsDiff, expectedDetails.CommFuncsDiff)
+	// Проверяем ResultDetails diff1 diff2
+	v1, ok := finalResult.ResultDetails["diff1"]
+	if !ok || v1 == nil {
+		t.Fatalf("diff1 missing: %#v", finalResult.ResultDetails)
+	}
+	d1, ok := v1.(AssessmentDiff)
+	if !ok {
+		t.Fatalf("diff1 wrong type %T: %#v", v1, v1)
 	}
 
-	// Проверяем VocabularyDiff
-	if expectedDetails.VocabularyDiff.ActiveWordsDelta != finalDetails.VocabularyDiff.ActiveWordsDelta ||
-		expectedDetails.VocabularyDiff.TotalWordsDelta != finalDetails.VocabularyDiff.TotalWordsDelta {
-		t.Fatalf("VocabularyDiff mismatch: got %+v, want %+v", finalDetails.VocabularyDiff, expectedDetails.VocabularyDiff)
+	v2, ok := finalResult.ResultDetails["diff2"]
+	if !ok || v2 == nil {
+		t.Fatalf("diff2 missing: %#v", finalResult.ResultDetails)
+	}
+	d2, ok := v2.(AssessmentDiff)
+	if !ok {
+		t.Fatalf("diff2 wrong type %T: %#v", v2, v2)
 	}
 
-	// Проверяем GeneralProgress
-	if expectedDetails.GeneralProgress.AverageProgress != finalDetails.GeneralProgress.AverageProgress {
-		t.Fatalf("GeneralProgress mismatch: got %+v, want %+v", finalDetails.GeneralProgress, expectedDetails.GeneralProgress)
+	// Проверяем основные поля для обоих diff
+	assertDiff := func(name string, got AssessmentDiff) {
+		if got.StudentID != expectedDiff.StudentID {
+			t.Fatalf("%s.StudentID mismatch: got %s, want %s", name, got.StudentID, expectedDiff.StudentID)
+		}
+		if got.PeriodStart != expectedDiff.PeriodStart {
+			t.Fatalf("%s.PeriodStart mismatch: got %s, want %s", name, got.PeriodStart, expectedDiff.PeriodStart)
+		}
+		if got.PeriodEnd != expectedDiff.PeriodEnd {
+			t.Fatalf("%s.PeriodEnd mismatch: got %s, want %s", name, got.PeriodEnd, expectedDiff.PeriodEnd)
+		}
+
+		if got.LangDevDiff != expectedDiff.LangDevDiff {
+			t.Fatalf("%s.LangDevDiff mismatch: got %+v, want %+v", name, got.LangDevDiff, expectedDiff.LangDevDiff)
+		}
+		if got.CommFuncsDiff != expectedDiff.CommFuncsDiff {
+			t.Fatalf("%s.CommFuncsDiff mismatch: got %+v, want %+v", name, got.CommFuncsDiff, expectedDiff.CommFuncsDiff)
+		}
+		if got.VocabularyDiff != expectedDiff.VocabularyDiff {
+			t.Fatalf("%s.VocabularyDiff mismatch: got %+v, want %+v", name, got.VocabularyDiff, expectedDiff.VocabularyDiff)
+		}
+		if got.GeneralProgress != expectedDiff.GeneralProgress {
+			t.Fatalf("%s.GeneralProgress mismatch: got %+v, want %+v", name, got.GeneralProgress, expectedDiff.GeneralProgress)
+		}
 	}
 
-	// Проверяем CreatedAt
-	if !finalResult.CreatedAt.Equal(expectedResult.CreatedAt) {
-		t.Fatalf("CreatedAt mismatch: got %v, want %v", finalResult.CreatedAt, expectedResult.CreatedAt)
-	}
+	assertDiff("diff1", d1)
+	assertDiff("diff2", d2)
 
 	cancel()
 }

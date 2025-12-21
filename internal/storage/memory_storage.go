@@ -51,7 +51,12 @@ func (rs *ResultStorage) Set(requestID string, result model.ProcessingResult) er
 		return fmt.Errorf("serialization error: %w", err)
 	}
 
-	err = rs.memcachedClient.Set(context.TODO(), requestID, value, 0)
+	ttl := time.Duration(rs.config.Memcached.DefaultTTL) * time.Second
+	if ttl < 0 {
+		ttl = 0
+	}
+
+	err = rs.memcachedClient.Set(context.TODO(), requestID, value, ttl)
 	if err != nil {
 		return fmt.Errorf("memcached set error: %w", err)
 	}
@@ -62,15 +67,12 @@ func (rs *ResultStorage) Set(requestID string, result model.ProcessingResult) er
 // Get получает результат по request_id
 func (rs *ResultStorage) Get(requestID string) (model.ProcessingResult, bool) {
 	rs.lock.RLock()
-	defer rs.lock.RUnlock()
-
-	// Сначала проверяем локальный кеш
 	result, exists := rs.results[requestID]
+	rs.lock.RUnlock()
 	if exists {
 		return result, true
 	}
 
-	// Если нет в локальном кеше, запрашиваем из мем-кеша
 	value, err := rs.memcachedClient.Get(context.TODO(), requestID)
 	if err != nil {
 		if err == memcached.ErrCacheMiss {
@@ -79,14 +81,14 @@ func (rs *ResultStorage) Get(requestID string) (model.ProcessingResult, bool) {
 		return model.ProcessingResult{}, false
 	}
 
-	// Десериализуем результат
 	result, err = deserialize(value)
 	if err != nil {
 		return model.ProcessingResult{}, false
 	}
 
-	// Обновляем локальный кеш
+	rs.lock.Lock()
 	rs.results[requestID] = result
+	rs.lock.Unlock()
 
 	return result, true
 }
@@ -94,32 +96,58 @@ func (rs *ResultStorage) Get(requestID string) (model.ProcessingResult, bool) {
 // UpdateStatus обновляет статус результата
 func (rs *ResultStorage) UpdateStatus(requestID, status string) error {
 	rs.lock.Lock()
-	defer rs.lock.Unlock()
-
-	if result, exists := rs.results[requestID]; exists {
-		// Создаем копию результата с обновленным статусом
-		updatedResult := result
-		updatedResult.Status = status
-
-		// Обновляем запись в карте
-		rs.results[requestID] = updatedResult
-		return nil
+	result, exists := rs.results[requestID]
+	if !exists {
+		rs.lock.Unlock()
+		return fmt.Errorf("result not found")
 	}
 
-	return fmt.Errorf("result not found")
+	result.Status = status
+	rs.results[requestID] = result
+	rs.lock.Unlock()
+
+	value, err := serialize(result)
+	if err != nil {
+		return fmt.Errorf("serialization error: %w", err)
+	}
+
+	ttl := time.Duration(rs.config.Memcached.DefaultTTL) * time.Second
+	if ttl < 0 {
+		ttl = 0
+	}
+
+	if err = rs.memcachedClient.Set(context.TODO(), requestID, value, ttl); err != nil {
+		return fmt.Errorf("memcached set error: %w", err)
+	}
+	return nil
 }
 
 // UpdateProgress обновляет прогресс обработки
 func (rs *ResultStorage) UpdateProgress(requestID string, progress int) error {
 	rs.lock.Lock()
-	defer rs.lock.Unlock()
+	result, exists := rs.results[requestID]
+	if !exists {
+		rs.lock.Unlock()
+		return fmt.Errorf("result not found")
+	}
+	result.ProcessedStudents += progress
+	rs.results[requestID] = result
+	rs.lock.Unlock()
 
-	if result, exists := rs.results[requestID]; exists {
-		result.ProcessedStudents += progress
-		return nil
+	value, err := serialize(result)
+	if err != nil {
+		return fmt.Errorf("serialization error: %w", err)
 	}
 
-	return fmt.Errorf("result not found")
+	ttl := time.Duration(rs.config.Memcached.DefaultTTL) * time.Second
+	if ttl < 0 {
+		ttl = 0
+	}
+
+	if err = rs.memcachedClient.Set(context.TODO(), requestID, value, ttl); err != nil {
+		return fmt.Errorf("memcached set error: %w", err)
+	}
+	return nil
 }
 
 // Delete удаляет результат по requestID
@@ -141,7 +169,11 @@ func (rs *ResultStorage) Delete(requestID string) error {
 func (rs *ResultStorage) GetAll() map[string]model.ProcessingResult {
 	rs.lock.RLock()
 	defer rs.lock.RUnlock()
-	return rs.results
+	out := make(map[string]model.ProcessingResult, len(rs.results))
+	for k, v := range rs.results {
+		out[k] = v
+	}
+	return out
 }
 
 // CleanupTicker запускает удаление устаревших записей

@@ -10,43 +10,61 @@ import (
 )
 
 // ResultAggregator собирает результаты и ошибки
-func ResultAggregator(resultChan <-chan model.ProcessingResult, errorChan <-chan model.ProcessingError, resultStorage *storage.ResultStorage, log *logger.Logger) {
+func ResultAggregator(
+	resultChan <-chan model.ProcessingResult,
+	errorChan <-chan model.ProcessingError,
+	resultStorage *storage.ResultStorage,
+	log *logger.Logger,
+) {
 	for {
 		select {
 		case result := <-resultChan:
-			// Получаем результат и ищем запись по request_id
 			currentResult, exists := resultStorage.Get(result.RequestID)
 
 			if exists {
-				// Если запись уже существует, обновляем её
-				updateAggregatedResult(currentResult, result)
+				updateAggregatedResult(&currentResult, result)
 				resultStorage.Set(result.RequestID, currentResult)
 			} else {
-				// Иначе создаём новую запись
-				result.CreatedAt = time.Now() // Добавляем время создания
+				if result.ResultDetails == nil {
+					result.ResultDetails = map[string]interface{}{}
+				}
+				normalizeDiffKeys(&result)
+				result.CreatedAt = time.Now()
 				resultStorage.Set(result.RequestID, result)
 			}
 
-			// Проверяем, завершился ли запрос
 			checkCompletion(resultStorage, result.RequestID, log)
 
 		case err := <-errorChan:
-			// Обработка ошибок
 			processError(resultStorage, err, log)
 		}
 	}
 }
 
 // updateAggregatedResult обновляет совокупный результат
-func updateAggregatedResult(currentResult, newResult model.ProcessingResult) {
-	// Объединяем результаты
-	currentResult.ProcessedStudents += newResult.ProcessedStudents
+func updateAggregatedResult(current *model.ProcessingResult, newResult model.ProcessingResult) {
+	current.ProcessedStudents += newResult.ProcessedStudents
 
-	// Генерация уникального ключа для нового результата
-	key := fmt.Sprintf("diff%d", len(currentResult.ResultDetails)+1)
+	if current.ResultDetails == nil {
+		current.ResultDetails = map[string]interface{}{}
+	}
+	normalizeDiffKeys(current)
 
-	// Добавляем новые данные под уникальным ключом
-	currentResult.ResultDetails[key] = newResult.ResultDetails
+	payload := interface{}(newResult.ResultDetails)
+	if newResult.ResultDetails != nil {
+		if v, ok := newResult.ResultDetails["diff"]; ok {
+			payload = v
+		}
+	}
+
+	next := nextDiffIndex(current.ResultDetails)
+	key := fmt.Sprintf("diff%d", next)
+	current.ResultDetails[key] = payload
+
+	// Если вдруг TotalStudents не был установлен в первой записи
+	if current.TotalStudents == 0 {
+		current.TotalStudents = newResult.TotalStudents
+	}
 }
 
 // checkCompletion проверяет, завершил ли запрос обработку
@@ -92,4 +110,30 @@ func processError(resultStorage *storage.ResultStorage, err model.ProcessingErro
 		resultStorage.Set(err.RequestID, failedResult)
 		log.Error("Creating new result with error for request %s", err.RequestID)
 	}
+}
+
+func normalizeDiffKeys(r *model.ProcessingResult) {
+	if r.ResultDetails == nil {
+		r.ResultDetails = map[string]interface{}{}
+		return
+	}
+	if v, ok := r.ResultDetails["diff"]; ok {
+		if _, exists := r.ResultDetails["diff1"]; !exists {
+			r.ResultDetails["diff1"] = v
+		}
+		delete(r.ResultDetails, "diff")
+	}
+}
+
+// Считает сколько уже есть diffN
+// При наличии diff1 следующий - diff2
+func nextDiffIndex(details map[string]interface{}) int {
+	max := 0
+	for k := range details {
+		var n int
+		if _, err := fmt.Sscanf(k, "diff%d", &n); err == nil && n > max {
+			max = n
+		}
+	}
+	return max + 1
 }
