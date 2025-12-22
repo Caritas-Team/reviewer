@@ -1,3 +1,6 @@
 .idea
 .vscode
 bin
+test1.json
+test2.json
+cfg/config.yml

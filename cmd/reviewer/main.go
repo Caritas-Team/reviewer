@@ -16,6 +16,8 @@ import (
 	"github.com/Caritas-Team/reviewer/internal/memcached"
 	"github.com/Caritas-Team/reviewer/internal/metrics"
 	"github.com/Caritas-Team/reviewer/internal/model"
+	"github.com/Caritas-Team/reviewer/internal/processing"
+	"github.com/Caritas-Team/reviewer/internal/storage"
 	"github.com/Caritas-Team/reviewer/internal/usecase/user"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel"
@@ -74,7 +76,13 @@ func main() {
 	checker := check.NewReadinessChecker(cache, rateLimiterMiddleware, log)
 
 	// Создаем канал для обработки
-	inputChan := make(chan []model.StudentPair, 100)
+	inputChan := make(chan []model.StudentPair, cfg.Pipeline.InputBufferSize)
+
+	// Канал для передачи результатов обработки
+	resultChan := make(chan model.ProcessingResult, cfg.Pipeline.ResultBufferSize)
+
+	// Канал для передачи ошибок
+	errorChan := make(chan model.ProcessingError, cfg.Pipeline.ResultBufferSize)
 
 	// Создаем обработчик загрузки
 	uploadHandler := handler.NewUploadHandler(cfg, log, cache, inputChan)
@@ -115,6 +123,23 @@ func main() {
 		IdleTimeout:  5 * time.Minute,
 	}
 
+	// Создаем хранилище
+	resultStorage, _ := storage.NewResultStorage(cfg, log)
+
+	// Создаем конфигурацию пайплайна
+	pipelineCfg := processing.PipelineConfig{
+		NumWorkers:    cfg.Pipeline.WorkerPoolSize,
+		Log:           log,
+		Config:        cfg,
+		ResultStorage: resultStorage,
+	}
+
+	// Создаем пайплайн
+	pipeline := processing.NewPipeline(inputChan, resultChan, errorChan, pipelineCfg)
+
+	// Запускаем пайплайн
+	pipeline.Start(rootCtx)
+
 	// Запуск сервера
 	errCh := make(chan error, 1)
 	go func() {
@@ -149,6 +174,9 @@ func main() {
 	} else {
 		log.Info("http server shutdown complete")
 	}
+
+	// Останавливаем пайплайн
+	pipeline.Stop()
 
 	if err := cache.Close(); err != nil {
 		log.Error("cache close error", "err", err)
