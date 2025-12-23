@@ -1,4 +1,4 @@
-package processing
+package assessment
 
 import (
 	"fmt"
@@ -22,34 +22,33 @@ type AssessmentDiff struct {
 
 // LangDevDiff различия в развитии языка
 type LangDevDiff struct {
-	PreintentionalDelta float64
-	ProtolanguageDelta  float64
-	HolophraseDelta     float64
-	PhraseDelta         float64
+	PreintentionalDelta float64 `json:"preintentional_delta"`
+	ProtolanguageDelta  float64 `json:"protolanguage_delta"`
+	HolophraseDelta     float64 `json:"holophrase_delta"`
+	PhraseDelta         float64 `json:"phrase_delta"`
 }
 
 // CommFuncsDiff различия в коммуникативных функциях
 type CommFuncsDiff struct {
-	ControlDelta             float64
-	ObtainingDesiredDelta    float64
-	SocialInteractionDelta   float64
-	InformationExchangeDelta float64
+	ControlDelta             float64 `json:"control_delta"`
+	ObtainingDesiredDelta    float64 `json:"obtaining_desired_delta"`
+	SocialInteractionDelta   float64 `json:"social_interaction_delta"`
+	InformationExchangeDelta float64 `json:"information_exchange_delta"`
 }
 
 // VocabularyDiff различия в словаре
 type VocabularyDiff struct {
-	ActiveWordsDelta int
-	TotalWordsDelta  int
+	ActiveWordsDelta int `json:"active_words_delta"`
+	TotalWordsDelta  int `json:"total_words_delta"`
 }
 
 // GeneralProgress общий прогресс
 type GeneralProgress struct {
-	AverageProgress float64
+	AverageProgress float64 `json:"average_progress"`
 }
 
 // Calculate вычисляет различия между двумя документами
 func (dc *DiffCalculator) Calculate(before, after *model.AssessmentDocument) (AssessmentDiff, error) {
-
 	if before == nil || after == nil {
 		return AssessmentDiff{}, fmt.Errorf("both documents are required")
 	}
@@ -71,7 +70,7 @@ func (dc *DiffCalculator) Calculate(before, after *model.AssessmentDocument) (As
 	diff.VocabularyDiff = dc.compareVocabulary(before.Vocabulary, after.Vocabulary)
 
 	// 4. Общий прогресс
-	diff.GeneralProgress.AverageProgress = dc.calculateAverageProgress(diff.LangDevDiff, diff.CommFuncsDiff)
+	diff.GeneralProgress.AverageProgress = dc.avg(diff.LangDevDiff, diff.CommFuncsDiff)
 
 	return diff, nil
 }
@@ -104,24 +103,15 @@ func (dc *DiffCalculator) compareVocabulary(before, after model.VocabularyData) 
 	}
 }
 
-// calculateAverageProgress вычисляет средний общий прогресс
-func (dc *DiffCalculator) calculateAverageProgress(langDevDiff LangDevDiff, commFuncsDiff CommFuncsDiff) float64 {
+// avg вычисляет средний общий прогресс
+func (dc *DiffCalculator) avg(lang LangDevDiff, comm CommFuncsDiff) float64 {
 	values := []float64{
-		langDevDiff.PreintentionalDelta,
-		langDevDiff.ProtolanguageDelta,
-		langDevDiff.HolophraseDelta,
-		langDevDiff.PhraseDelta,
-		commFuncsDiff.ControlDelta,
-		commFuncsDiff.ObtainingDesiredDelta,
-		commFuncsDiff.SocialInteractionDelta,
-		commFuncsDiff.InformationExchangeDelta,
+		lang.PreintentionalDelta, lang.ProtolanguageDelta, lang.HolophraseDelta, lang.PhraseDelta,
+		comm.ControlDelta, comm.ObtainingDesiredDelta, comm.SocialInteractionDelta, comm.InformationExchangeDelta,
 	}
-
 	sum := 0.0
 	for _, v := range values {
 		sum += v
 	}
-
 	return sum / float64(len(values))
-
 }

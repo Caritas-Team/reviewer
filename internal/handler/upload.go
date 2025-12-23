@@ -14,6 +14,7 @@ import (
 	"github.com/Caritas-Team/reviewer/internal/logger"
 	"github.com/Caritas-Team/reviewer/internal/memcached"
 	"github.com/Caritas-Team/reviewer/internal/model"
+	"github.com/Caritas-Team/reviewer/internal/usecase/assessment"
 	"github.com/Caritas-Team/reviewer/internal/usecase/file"
 	"github.com/google/uuid"
 )
@@ -38,16 +39,18 @@ type UploadHandler struct {
 	cfg          config.Config
 	log          *logger.Logger
 	cache        memcached.CacheInterface
+	results      *assessment.ResultStorage
 	inputChan    chan<- []model.StudentPair
 	maxTotalSize int64
 	parser       *file.DocumentParser
 }
 
-func NewUploadHandler(cfg config.Config, log *logger.Logger, cache memcached.CacheInterface, inputChan chan<- []model.StudentPair) *UploadHandler {
+func NewUploadHandler(cfg config.Config, log *logger.Logger, cache memcached.CacheInterface, results *assessment.ResultStorage, inputChan chan<- []model.StudentPair) *UploadHandler {
 	return &UploadHandler{
 		cfg:          cfg,
 		log:          log,
 		cache:        cache,
+		results:      results,
 		inputChan:    inputChan,
 		maxTotalSize: cfg.Files.MaxFileSize * int64(cfg.Files.MaxFilesPerRequest),
 		parser:       &file.DocumentParser{},
@@ -215,6 +218,13 @@ func (h *UploadHandler) UploadAssessmentsHandler(w http.ResponseWriter, r *http.
 		return
 	}
 
+	_ = h.results.Set(ctx, requestID, &assessment.ProcessingResult{
+		Status:            "processing",
+		ProgressPercent:   0,
+		ProcessedStudents: 0,
+		TotalStudents:     len(studentPairs),
+	}, time.Hour)
+
 	if meta.Organization != "" || meta.Specialist != "" {
 		h.log.WithContext(ctx).Info("Upload request with metadata",
 			"request_id", requestID,
@@ -242,6 +252,13 @@ func (h *UploadHandler) UploadAssessmentsHandler(w http.ResponseWriter, r *http.
 			map[string]any{"error": err.Error()})
 		return
 	}
+
+	_ = h.results.Set(ctx, requestID, &assessment.ProcessingResult{
+		Status:            "processing",
+		ProgressPercent:   0,
+		ProcessedStudents: 0,
+		TotalStudents:     len(studentPairs),
+	}, time.Hour)
 
 	// Отправляем в канал обработки
 	h.sendToProcessingChannel(ctx, studentPairs)

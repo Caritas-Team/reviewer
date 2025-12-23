@@ -16,8 +16,7 @@ import (
 	"github.com/Caritas-Team/reviewer/internal/memcached"
 	"github.com/Caritas-Team/reviewer/internal/metrics"
 	"github.com/Caritas-Team/reviewer/internal/model"
-	"github.com/Caritas-Team/reviewer/internal/processing"
-	"github.com/Caritas-Team/reviewer/internal/storage"
+	"github.com/Caritas-Team/reviewer/internal/usecase/assessment"
 	"github.com/Caritas-Team/reviewer/internal/usecase/user"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel"
@@ -75,21 +74,29 @@ func main() {
 	// Экземпляр ReadinessChecker
 	checker := check.NewReadinessChecker(cache, rateLimiterMiddleware, log)
 
+	// Хранилище результатов проверки
+	resultStorage := assessment.NewResultStorage(cache)
+
 	// Создаем канал для обработки
 	inputChan := make(chan []model.StudentPair, cfg.Pipeline.InputBufferSize)
 
-	// Канал для передачи результатов обработки
-	resultChan := make(chan model.ProcessingResult, cfg.Pipeline.ResultBufferSize)
-
-	// Канал для передачи ошибок
-	errorChan := make(chan model.ProcessingError, cfg.Pipeline.ResultBufferSize)
-
 	// Создаем обработчик загрузки
-	uploadHandler := handler.NewUploadHandler(cfg, log, cache, inputChan)
+	uploadHandler := handler.NewUploadHandler(cfg, log, cache, resultStorage, inputChan)
+
+	// Worker (пишет processing/completed/failed в ResultStorage)
+	processor := assessment.NewProcessor(&assessment.DiffCalculator{})
+	w := assessment.NewWorker(log, resultStorage, processor, time.Hour)
+	go w.Run(rootCtx, inputChan)
 
 	mux := http.NewServeMux()
 	mux.Handle("POST /v1/assessments/upload",
 		http.HandlerFunc(uploadHandler.UploadAssessmentsHandler))
+
+	// Эндпоинт для получения результатов обработки (GET /v1/assessments/{request_id})
+	mux.Handle("GET /v1/assessments/{request_id}",
+		handler.GetAssessmentResultsHandler(resultStorage, log))
+
+	mux.HandleFunc("/v1/assessments/", handler.GetAssessmentResultsHandler(resultStorage, log))
 
 	// Эндпоинт для health check
 	mux.HandleFunc("/health", check.HealthCheckHandler(cache, log, 29*time.Second)) // Тайминг можно настроить
@@ -123,23 +130,6 @@ func main() {
 		IdleTimeout:  5 * time.Minute,
 	}
 
-	// Создаем хранилище
-	resultStorage, _ := storage.NewResultStorage(cfg, log)
-
-	// Создаем конфигурацию пайплайна
-	pipelineCfg := processing.PipelineConfig{
-		NumWorkers:    cfg.Pipeline.WorkerPoolSize,
-		Log:           log,
-		Config:        cfg,
-		ResultStorage: resultStorage,
-	}
-
-	// Создаем пайплайн
-	pipeline := processing.NewPipeline(inputChan, resultChan, errorChan, pipelineCfg)
-
-	// Запускаем пайплайн
-	pipeline.Start(rootCtx)
-
 	// Запуск сервера
 	errCh := make(chan error, 1)
 	go func() {
@@ -164,7 +154,6 @@ func main() {
 	}
 
 	// Graceful shutdown
-
 	graceTime := 30 * time.Second
 	shCtx, cancel := context.WithTimeout(ctx, graceTime)
 	defer cancel()
@@ -174,9 +163,6 @@ func main() {
 	} else {
 		log.Info("http server shutdown complete")
 	}
-
-	// Останавливаем пайплайн
-	pipeline.Stop()
 
 	if err := cache.Close(); err != nil {
 		log.Error("cache close error", "err", err)

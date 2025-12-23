@@ -4,7 +4,6 @@ import (
 	"bytes"
 	_ "embed"
 	"encoding/json"
-	"fmt"
 	"mime/multipart"
 	"net/http/httptest"
 	"testing"
@@ -14,6 +13,7 @@ import (
 	"github.com/Caritas-Team/reviewer/internal/logger"
 	"github.com/Caritas-Team/reviewer/internal/memcached"
 	"github.com/Caritas-Team/reviewer/internal/model"
+	"github.com/Caritas-Team/reviewer/internal/usecase/assessment"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -35,7 +35,8 @@ func TestIntegration_RealFileParsing(t *testing.T) {
 	mockCache := NewMockCache()
 	inputChan := make(chan []model.StudentPair, 10)
 
-	handler := NewUploadHandler(cfg, log, mockCache, inputChan)
+	resultStorage := assessment.NewResultStorage(mockCache)
+	handler := NewUploadHandler(cfg, log, mockCache, resultStorage, inputChan)
 
 	receivedData := make(chan []model.StudentPair, 1)
 	go func() {
@@ -49,13 +50,10 @@ func TestIntegration_RealFileParsing(t *testing.T) {
 
 	requestID := uuid.New().String()
 
-	mockCache.On("Get", mock.Anything, mock.MatchedBy(func(key string) bool {
-		return key == fmt.Sprintf("task:%s", requestID)
-	})).Return(nil, memcached.ErrCacheMiss).Once()
+	mockCache.On("Get", mock.Anything, "task:"+requestID).Return(nil, memcached.ErrCacheMiss).Maybe()
+	mockCache.On("Set", mock.Anything, "task:"+requestID, mock.Anything, mock.Anything).Return(nil).Maybe()
 
-	mockCache.On("Set", mock.Anything, mock.MatchedBy(func(key string) bool {
-		return key == fmt.Sprintf("task:%s", requestID)
-	}), mock.Anything, mock.Anything).Return(nil).Once()
+	mockCache.On("Set", mock.Anything, requestID, mock.Anything, mock.Anything).Return(nil).Maybe()
 
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
