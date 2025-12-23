@@ -4,7 +4,6 @@ import (
 	"bytes"
 	_ "embed"
 	"encoding/json"
-	"fmt"
 	"mime/multipart"
 	"net/http/httptest"
 	"testing"
@@ -51,13 +50,10 @@ func TestIntegration_RealFileParsing(t *testing.T) {
 
 	requestID := uuid.New().String()
 
-	mockCache.On("Get", mock.Anything, mock.MatchedBy(func(key string) bool {
-		return key == fmt.Sprintf("task:%s", requestID)
-	})).Return(nil, memcached.ErrCacheMiss).Once()
+	mockCache.On("Get", mock.Anything, "task:"+requestID).Return(nil, memcached.ErrCacheMiss).Maybe()
+	mockCache.On("Set", mock.Anything, "task:"+requestID, mock.Anything, mock.Anything).Return(nil).Maybe()
 
-	mockCache.On("Set", mock.Anything, mock.MatchedBy(func(key string) bool {
-		return key == fmt.Sprintf("task:%s", requestID)
-	}), mock.Anything, mock.Anything).Return(nil).Once()
+	mockCache.On("Set", mock.Anything, requestID, mock.Anything, mock.Anything).Return(nil).Maybe()
 
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)

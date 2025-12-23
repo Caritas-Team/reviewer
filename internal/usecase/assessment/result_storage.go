@@ -11,18 +11,9 @@ import (
 	"github.com/bradfitz/gomemcache/memcache"
 )
 
+const taskKeyPrefix = "task:"
+
 var ErrNotFound = errors.New("result not found")
-
-type AssessmentDiff struct {
-	StudentID string      `json:"student_id"`
-	Diffs     []FieldDiff `json:"diffs"`
-}
-
-type FieldDiff struct {
-	Field    string `json:"field"`
-	Expected any    `json:"expected"`
-	Actual   any    `json:"actual"`
-}
 
 type ProcessingResult struct {
 	Status            string           `json:"status"`
@@ -54,11 +45,11 @@ func (s *ResultStorage) Set(ctx context.Context, requestID string, res *Processi
 		return err
 	}
 
-	return s.cache.Set(ctx, requestID, b, ttl)
+	return s.cache.Set(ctx, cacheKey(requestID), b, ttl)
 }
 
 func (s *ResultStorage) Get(ctx context.Context, requestID string) (*ProcessingResult, error) {
-	b, err := s.cache.Get(ctx, requestID)
+	b, err := s.cache.Get(ctx, cacheKey(requestID))
 	if err != nil {
 		if errors.Is(err, memcached.ErrCacheMiss) || errors.Is(err, memcache.ErrCacheMiss) ||
 			strings.Contains(strings.ToLower(err.Error()), "cache miss") {
@@ -78,7 +69,7 @@ func (s *ResultStorage) Get(ctx context.Context, requestID string) (*ProcessingR
 }
 
 func (s *ResultStorage) GetAndDelete(ctx context.Context, requestID string, keepInCache bool) (*ProcessingResult, error) {
-	b, err := s.cache.Get(ctx, requestID)
+	b, err := s.cache.Get(ctx, cacheKey(requestID))
 	if err != nil {
 		if errors.Is(err, memcached.ErrCacheMiss) || errors.Is(err, memcache.ErrCacheMiss) ||
 			strings.Contains(strings.ToLower(err.Error()), "cache miss") {
@@ -98,11 +89,13 @@ func (s *ResultStorage) GetAndDelete(ctx context.Context, requestID string, keep
 	switch res.Status {
 	case "completed":
 		if !keepInCache {
-			_ = s.cache.Delete(ctx, requestID)
+			_ = s.cache.Delete(ctx, cacheKey(requestID))
 		}
 	case "failed":
-		_ = s.cache.Delete(ctx, requestID)
+		_ = s.cache.Delete(ctx, cacheKey(requestID))
 	}
 
 	return &res, nil
 }
+
+func cacheKey(requestID string) string { return taskKeyPrefix + requestID }

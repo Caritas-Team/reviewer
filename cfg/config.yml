@@ -58,3 +58,9 @@ logging:
 # Jaeger
 jaeger:
     endpoint: "localhost:4318"
+
+    # Настройка пайплайна
+pipeline:
+  worker_pool_size: 10
+  input_buffer_size: 100
+  result_buffer_size: 50

@@ -40,8 +40,28 @@ func (w *Worker) Run(ctx context.Context, input <-chan []model.StudentPair) {
 }
 
 func (w *Worker) handle(ctx context.Context, pairs []model.StudentPair) {
+	if len(pairs) == 0 {
+		return
+	}
+
 	requestID := pairs[0].RequestID
 	total := len(pairs)
+
+	if w.processor == nil {
+		_ = w.storage.Set(ctx, requestID, &ProcessingResult{
+			Status:        "failed",
+			TotalStudents: total,
+			Error:         "processor is nil",
+		}, w.ttl)
+		return
+	}
+
+	_ = w.storage.Set(ctx, requestID, &ProcessingResult{
+		Status:            "processing",
+		ProgressPercent:   0,
+		ProcessedStudents: 0,
+		TotalStudents:     total,
+	}, w.ttl)
 
 	results := make([]AssessmentDiff, 0, total)
 
@@ -53,8 +73,11 @@ func (w *Worker) handle(ctx context.Context, pairs []model.StudentPair) {
 		diff, err := w.processor.Process(ctx, pairs[i])
 		if err != nil {
 			_ = w.storage.Set(ctx, requestID, &ProcessingResult{
-				Status: "failed",
-				Error:  err.Error(),
+				Status:            "failed",
+				ProgressPercent:   (i * 100) / total,
+				ProcessedStudents: i,
+				TotalStudents:     total,
+				Error:             err.Error(),
 			}, w.ttl)
 			return
 		}
@@ -73,7 +96,10 @@ func (w *Worker) handle(ctx context.Context, pairs []model.StudentPair) {
 	}
 
 	_ = w.storage.Set(ctx, requestID, &ProcessingResult{
-		Status:  "completed",
-		Results: results,
+		Status:            "completed",
+		ProgressPercent:   100,
+		ProcessedStudents: total,
+		TotalStudents:     total,
+		Results:           results,
 	}, w.ttl)
 }
