@@ -2,6 +2,8 @@ package config
 
 import (
 	"fmt"
+	"os"
+	"strings"
 	"time"
 
 	"github.com/spf13/viper"
@@ -58,7 +60,7 @@ type Logging struct {
 }
 
 type Jaeger struct {
-	Endpoint string `yaml:"endpoint"`
+	Endpoint string `mapstructure:"endpoint"`
 }
 
 // PipelineConfig - конфигурация пайплайна
@@ -76,7 +78,7 @@ type Config struct {
 	Files       Files          `mapstructure:"files"`
 	Metrics     Metrics        `mapstructure:"metrics"`
 	Logging     Logging        `mapstructure:"logging"`
-	Jaeger      Jaeger         `yaml:"jaeger"`
+	Jaeger      Jaeger         `mapstructure:"jaeger"`
 	Pipeline    PipelineConfig `mapstructure:"pipeline"`
 }
 
@@ -87,10 +89,28 @@ func Load() (Config, error) {
 	v.SetConfigName("config")
 	v.SetConfigType("yaml")
 	v.AddConfigPath("cfg")
+	v.AutomaticEnv()
+	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_", "-", "_"))
+	v.SetDefault("cors.allowed_origins", []string{"http://localhost:8000"})
 
 	if err := v.ReadInConfig(); err != nil {
 		return cfg, fmt.Errorf("read config: %w", err)
 	}
+
+	if s, ok := os.LookupEnv("CORS_ALLOWED_ORIGINS"); ok && strings.TrimSpace(s) != "" {
+		parts := strings.Split(s, ",")
+		out := make([]string, 0, len(parts))
+		for _, p := range parts {
+			p = strings.TrimSpace(p)
+			if p != "" {
+				out = append(out, p)
+			}
+		}
+		if len(out) > 0 {
+			v.Set("cors.allowed_origins", out)
+		}
+	}
+
 	if err := v.Unmarshal(&cfg); err != nil {
 		return cfg, fmt.Errorf("unmarshal config: %w", err)
 	}
