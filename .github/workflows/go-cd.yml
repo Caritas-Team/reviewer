@@ -1,0 +1,75 @@
+name: Go CD
+
+on:
+  push:
+    branches: [ main, develop, devops/test-deploy ]
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.25'
+          cache: true
+
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v8
+        with:
+          version: v2.5.0
+          args: --timeout=5m
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.25'
+          cache: true
+
+      - name: Run tests
+        run: |
+          make test test-race
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        name: Check out branch
+
+      - name: Copy code to host
+        uses: appleboy/scp-action@v1
+        with:
+          host: ${{ vars.SSH_DEPLOY_HOST }}
+          username: ${{ secrets.SSH_DEPLOY_USER }}
+          key: ${{ secrets.SSH_DEPLOY_KEY }}
+          source: "."
+          target: "backend"
+          rm: true
+
+      - name: SSH commands on host
+        uses: appleboy/ssh-action@v1
+        env:
+          CADDY_DOMAIN_NAME: ${{ vars.CADDY_DOMAIN_NAME }}
+          CADDY_LETSENCRYPT_EMAIL: ${{ vars.CADDY_LETSENCRYPT_EMAIL }}
+          CORS_ALLOWED_ORIGINS: ${{ vars.CORS_ALLOWED_ORIGINS }}
+        with:
+          host: ${{ vars.SSH_DEPLOY_HOST }}
+          username: ${{ secrets.SSH_DEPLOY_USER }}
+          key: ${{ secrets.SSH_DEPLOY_KEY }}
+          envs: CADDY_DOMAIN_NAME,CADDY_LETSENCRYPT_EMAIL,CORS_ALLOWED_ORIGINS
+          script: |
+            cd ~/backend/
+            bash ./infra/deploy.sh

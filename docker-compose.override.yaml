@@ -1,0 +1,13 @@
+services:
+  reviewer:
+    ports:
+      - "8080:8080"
+
+  memcached:
+    ports:
+    - "11211:11211"
+
+  jaeger:
+    ports:
+      - "16686:16686"
+      - "14268:14268"
