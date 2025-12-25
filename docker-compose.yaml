@@ -1,25 +1,29 @@
 services:
   reviewer:
     build: .
-    ports:
-      - "8080:8080"
     depends_on:
       - memcached
+    expose:
+      - 8080
+    restart: unless-stopped
+
   memcached:
     image: memcached:1.6.39-alpine
     command:
       - --conn-limit=1024
       - --memory-limit=64
       - --threads=2
-    ports:
-    - "11211:11211"
     ulimits:
       nofile:
         soft: 65536
         hard: 65536
+    expose:
+      - 11211
+    restart: unless-stopped
+
   jaeger:
     image: jaegertracing/all-in-one:1.60
-    container_name: jaeger
-    ports:
-      - "16686:16686"
-      - "14268:14268"
+    expose:
+      - 16686
+      - 14268
+    restart: unless-stopped

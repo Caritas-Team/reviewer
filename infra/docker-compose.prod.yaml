@@ -1,0 +1,24 @@
+services:
+  reviewer:
+    environment:
+      - CORS_ALLOWED_ORIGINS
+
+  caddy:
+    image: caddy:2.10.0
+    restart: unless-stopped
+    environment:
+      - CADDY_DOMAIN_NAME
+      - CADDY_LETSENCRYPT_EMAIL
+    volumes:
+      - ./infra/caddy/Caddyfile:/etc/caddy/Caddyfile
+      - caddy-config:/config
+      - caddy-data:/data
+      - ~/frontend/dist:/var/www/frontend
+    ports:
+      - "80:80"
+      - "443:443"
+
+
+volumes:
+  caddy-config:
+  caddy-data:

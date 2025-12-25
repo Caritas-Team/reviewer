@@ -24,7 +24,7 @@ cors:
 # Rate Limiting
 rate_limiter:
   enabled: true
-  requests_per_window: 1
+  requests_per_window: 500
   window_size: 30 # секунд
   storage: "memcached"
 
