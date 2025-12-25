@@ -23,7 +23,7 @@ services:
 
   jaeger:
     image: jaegertracing/all-in-one:1.60
-    expose:
-      - 16686
-      - 14268
+    ports:
+      - "16686:16686"
+      - "14268:14268"
     restart: unless-stopped
