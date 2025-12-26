@@ -176,7 +176,7 @@ func main() {
 
 func initTracer(ctx context.Context, serviceName, endpoint string) (func(context.Context) error, error) {
 	if endpoint == "" {
-		endpoint = "localhost:4318"
+		endpoint = "jaeger:4318"
 	}
 
 	client := otlptracehttp.NewClient(
