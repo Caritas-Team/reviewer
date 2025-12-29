@@ -18,7 +18,7 @@ cors:
     - "User-Agent"
     - "Cookie"
     - "X-Timestamp"
-    - "X-Request-UUID"
+    - "X-Request-Id"
     - "Content-Type"
 
 # Rate Limiting
