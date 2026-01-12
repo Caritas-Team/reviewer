@@ -21,6 +21,7 @@ type ProcessingResult struct {
 	ProcessedStudents int              `json:"processed_students,omitempty"`
 	TotalStudents     int              `json:"total_students,omitempty"`
 	Results           []AssessmentDiff `json:"results,omitempty"`
+	GroupAverages     []GroupAverage   `json:"group_averages,omitempty"`
 	Error             any              `json:"error,omitempty"`
 }
 
