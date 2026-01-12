@@ -47,6 +47,15 @@ type GeneralProgress struct {
 	AverageProgress float64 `json:"average_progress"`
 }
 
+// GroupAverage - средние значения по группе за конкретную дату
+type GroupAverage struct {
+	Date               string                       `json:"date"`                // Дата в формате "2006-01-02"
+	LanguageLevels     model.LanguageDevelopment    `json:"language_levels"`     // Средние значения уровней развития
+	CommunicativeFuncs model.CommunicativeFunctions `json:"communicative_funcs"` // Средние значения коммуникативных функций
+	Vocabulary         model.VocabularyData         `json:"vocabulary"`          // Средние значения словарного запаса
+	StudentsCount      int                          `json:"students_count"`      // Количество студентов в группе
+}
+
 // Calculate вычисляет различия между двумя документами
 func (dc *DiffCalculator) Calculate(before, after *model.AssessmentDocument) (AssessmentDiff, error) {
 	if before == nil || after == nil {
@@ -114,4 +123,79 @@ func (dc *DiffCalculator) avg(lang LangDevDiff, comm CommFuncsDiff) float64 {
 		sum += v
 	}
 	return sum / float64(len(values))
+}
+
+// CalculateGroupAverage вычисляет средние значения по группе документов
+func (dc *DiffCalculator) CalculateGroupAverage(documents []*model.AssessmentDocument) (GroupAverage, error) {
+	if len(documents) == 0 {
+		return GroupAverage{}, fmt.Errorf("empty documents list")
+	}
+
+	date := documents[0].Metadata.Date.Format("2006-01-02")
+
+	var sumLangDev model.LanguageDevelopment
+	var sumCommFuncs model.CommunicativeFunctions
+	var sumVocab model.VocabularyData
+	count := len(documents)
+
+	for _, doc := range documents {
+		if doc.Metadata.Date.Format("2006-01-02") != date {
+			return GroupAverage{}, fmt.Errorf("documents have different dates")
+		}
+
+		sumLangDev.Preintentional.Activity += doc.LanguageLevels.Preintentional.Activity
+		sumLangDev.Protolanguage.Activity += doc.LanguageLevels.Protolanguage.Activity
+		sumLangDev.Protolanguage.Initiative += doc.LanguageLevels.Protolanguage.Initiative
+		sumLangDev.Holophrase.Activity += doc.LanguageLevels.Holophrase.Activity
+		sumLangDev.Holophrase.Initiative += doc.LanguageLevels.Holophrase.Initiative
+		sumLangDev.Phrase.Activity += doc.LanguageLevels.Phrase.Activity
+		sumLangDev.Phrase.Initiative += doc.LanguageLevels.Phrase.Initiative
+
+		sumCommFuncs.Control += doc.CommunicativeFuncs.Control
+		sumCommFuncs.ObtainingDesired += doc.CommunicativeFuncs.ObtainingDesired
+		sumCommFuncs.SocialInteraction += doc.CommunicativeFuncs.SocialInteraction
+		sumCommFuncs.InformationExchange += doc.CommunicativeFuncs.InformationExchange
+
+		sumVocab.ActiveWordsCount += doc.Vocabulary.ActiveWordsCount
+		sumVocab.TotalWordsCount += doc.Vocabulary.TotalWordsCount
+	}
+
+	avgLangDev := model.LanguageDevelopment{
+		Preintentional: model.Preintentional{
+			Activity: sumLangDev.Preintentional.Activity / float64(count),
+		},
+		Protolanguage: model.LanguageActivity{
+			Activity:   sumLangDev.Protolanguage.Activity / float64(count),
+			Initiative: sumLangDev.Protolanguage.Initiative / float64(count),
+		},
+		Holophrase: model.LanguageActivity{
+			Activity:   sumLangDev.Holophrase.Activity / float64(count),
+			Initiative: sumLangDev.Holophrase.Initiative / float64(count),
+		},
+		Phrase: model.LanguageActivity{
+			Activity:   sumLangDev.Phrase.Activity / float64(count),
+			Initiative: sumLangDev.Phrase.Initiative / float64(count),
+		},
+	}
+
+	avgCommFuncs := model.CommunicativeFunctions{
+		Control:             sumCommFuncs.Control / float64(count),
+		ObtainingDesired:    sumCommFuncs.ObtainingDesired / float64(count),
+		SocialInteraction:   sumCommFuncs.SocialInteraction / float64(count),
+		InformationExchange: sumCommFuncs.InformationExchange / float64(count),
+	}
+
+	avgVocab := model.VocabularyData{
+		ActiveWordsCount: sumVocab.ActiveWordsCount / count,
+		TotalWordsCount:  sumVocab.TotalWordsCount / count,
+		AdditionalWords:  nil, // Не суммируем, это список строк
+	}
+
+	return GroupAverage{
+		Date:               date,
+		LanguageLevels:     avgLangDev,
+		CommunicativeFuncs: avgCommFuncs,
+		Vocabulary:         avgVocab,
+		StudentsCount:      count,
+	}, nil
 }
