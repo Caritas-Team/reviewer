@@ -2,6 +2,7 @@ package assessment
 
 import (
 	"context"
+	"sort"
 	"time"
 
 	"github.com/Caritas-Team/reviewer/internal/logger"
@@ -95,11 +96,84 @@ func (w *Worker) handle(ctx context.Context, pairs []model.StudentPair) {
 		}, w.ttl)
 	}
 
+	// Рассчитываем средние значения по группе
+	groupAverages := w.calculateGroupAverages(pairs)
+
+	// Рассчитываем прогресс группы между датами
+	groupProgress := w.calculateGroupProgress(groupAverages)
+
 	_ = w.storage.Set(ctx, requestID, &ProcessingResult{
 		Status:            "completed",
 		ProgressPercent:   100,
 		ProcessedStudents: total,
 		TotalStudents:     total,
 		Results:           results,
+		GroupAverages:     groupAverages,
+		GroupProgress:     groupProgress,
 	}, w.ttl)
+}
+
+// calculateGroupAverages группирует документы по датам и вычисляет средние
+func (w *Worker) calculateGroupAverages(pairs []model.StudentPair) []GroupAverage {
+	// Собираем все документы (и Before, и After)
+	documentsByDate := make(map[string][]*model.AssessmentDocument)
+
+	for _, pair := range pairs {
+		if pair.Before != nil {
+			dateKey := pair.Before.Metadata.Date.Format("2006-01-02")
+			documentsByDate[dateKey] = append(documentsByDate[dateKey], pair.Before)
+		}
+		if pair.After != nil {
+			dateKey := pair.After.Metadata.Date.Format("2006-01-02")
+			documentsByDate[dateKey] = append(documentsByDate[dateKey], pair.After)
+		}
+	}
+
+	// Вычисляем средние для каждой даты
+	calc := &DiffCalculator{}
+	averages := make([]GroupAverage, 0, len(documentsByDate))
+
+	for dateKey, docs := range documentsByDate {
+		avg, err := calc.CalculateGroupAverage(docs)
+		if err != nil {
+			// Логируем ошибку, но продолжаем обработку
+			w.log.Error("failed to calculate group average", "date", dateKey, "error", err)
+			continue
+		}
+		averages = append(averages, avg)
+	}
+
+	// Сортируем по дате
+	sort.Slice(averages, func(i, j int) bool {
+		return averages[i].Date < averages[j].Date
+	})
+
+	return averages
+}
+
+// calculateGroupProgress рассчитывает прогресс между средними значениями группы
+func (w *Worker) calculateGroupProgress(averages []GroupAverage) []GroupProgress {
+	if len(averages) < 2 {
+		return nil
+	}
+
+	calc := &DiffCalculator{}
+	progressList := make([]GroupProgress, 0)
+
+	// Для каждой пары последовательных дат рассчитываем прогресс
+	for i := 0; i < len(averages)-1; i++ {
+		for j := i + 1; j < len(averages); j++ {
+			progress, err := calc.CalculateGroupProgress(averages[i], averages[j])
+			if err != nil {
+				w.log.Error("failed to calculate group progress",
+					"date1", averages[i].Date,
+					"date2", averages[j].Date,
+					"error", err)
+				continue
+			}
+			progressList = append(progressList, progress)
+		}
+	}
+
+	return progressList
 }

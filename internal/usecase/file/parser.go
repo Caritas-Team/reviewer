@@ -64,34 +64,29 @@ func (p *DocumentParser) Parse(r io.Reader, filename string) (*model.AssessmentD
 	return doc, nil
 }
 
+type ProcNumElem struct {
+	ProcNumElem string `json:"procNumElem"`
+}
+
+type DiagramBlock struct {
+	PredActProcNumElem  string `json:"predActProcNumElem"`
+	ProtActProcNumElem  string `json:"protActProcNumElem"`
+	ProtInitProcNumElem string `json:"protInitProcNumElem"`
+	GolActProcNumElem   string `json:"golActProcNumElem"`
+	GolInitProcNumElem  string `json:"golInitProcNumElem"`
+	FraActProcNumElem   string `json:"fraActProcNumElem"`
+	FraInitProcNumElem  string `json:"fraInitProcNumElem"`
+}
+
 type FullRawJSON struct {
-	Por01    string `json:"por01"` // Дата в формате <div>2025-11-11</div>
-	Por02    string `json:"por02"` // Student ID в формате <div>123</div>
-	NewAct01 struct {
-		ProcNumElem string `json:"procNumElem"`
-	} `json:"newAct01"`
+	Por01    string      `json:"por01"` // Дата в формате <div>2025-11-11</div>
+	Por02    string      `json:"por02"` // Student ID в формате <div>123</div>
+	NewAct01 ProcNumElem `json:"newAct01"`
+	NewAct02 ProcNumElem `json:"newAct02"`
+	NewAct03 ProcNumElem `json:"newAct03"`
+	NewAct04 ProcNumElem `json:"newAct04"`
 
-	NewAct02 struct {
-		ProcNumElem string `json:"procNumElem"`
-	} `json:"newAct02"`
-
-	NewAct03 struct {
-		ProcNumElem string `json:"procNumElem"`
-	} `json:"newAct03"`
-
-	NewAct04 struct {
-		ProcNumElem string `json:"procNumElem"`
-	} `json:"newAct04"`
-
-	DiagramBlock struct {
-		PredActProcNumElem  string `json:"predActProcNumElem"`
-		ProtActProcNumElem  string `json:"protActProcNumElem"`
-		ProtInitProcNumElem string `json:"protInitProcNumElem"`
-		GolActProcNumElem   string `json:"golActProcNumElem"`
-		GolInitProcNumElem  string `json:"golInitProcNumElem"`
-		FraActProcNumElem   string `json:"fraActProcNumElem"`
-		FraInitProcNumElem  string `json:"fraInitProcNumElem"`
-	} `json:"diagramBlock"`
+	DiagramBlock DiagramBlock `json:"diagramBlock"`
 
 	BasicDictionary []BasicDictionaryItem `json:"basicDictionary"`
 	DictBasicMore   []string              `json:"dictBasicMore"`

@@ -28,8 +28,10 @@ type AssessmentProcessingResponse struct {
 }
 
 type AssessmentCompletedResponse struct {
-	Status  string                      `json:"status"`
-	Results []assessment.AssessmentDiff `json:"results"`
+	Status        string                      `json:"status"`
+	Results       []assessment.AssessmentDiff `json:"results"`
+	GroupAverages []assessment.GroupAverage   `json:"group_averages,omitempty"`
+	GroupProgress []assessment.GroupProgress  `json:"group_progress,omitempty"`
 }
 
 type AssessmentFailedResponse struct {
@@ -84,8 +86,10 @@ func respond(w http.ResponseWriter, res *assessment.ProcessingResult) {
 		})
 	case "completed":
 		writeJSON(w, http.StatusOK, AssessmentCompletedResponse{
-			Status:  "completed",
-			Results: res.Results,
+			Status:        "completed",
+			Results:       res.Results,
+			GroupAverages: res.GroupAverages,
+			GroupProgress: res.GroupProgress,
 		})
 	case "failed":
 		writeJSON(w, http.StatusOK, AssessmentFailedResponse{
