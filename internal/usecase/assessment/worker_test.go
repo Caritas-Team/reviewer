@@ -42,8 +42,66 @@ func TestWorker_Run_Success(t *testing.T) {
 	reqID := uuid.NewString()
 
 	input <- []model.StudentPair{
-		{RequestID: reqID, StudentID: "S1"},
-		{RequestID: reqID, StudentID: "S2"},
+		{
+			RequestID: reqID,
+			StudentID: "S1",
+			Before: &model.AssessmentDocument{
+				Metadata: model.AssessmentMetadata{
+					StudentID:      "S1",
+					Date:           time.Date(2025, 12, 18, 0, 0, 0, 0, time.UTC),
+					AssessmentType: "before",
+				},
+				CommunicativeFuncs: model.CommunicativeFunctions{
+					Control:             40.0,
+					ObtainingDesired:    50.0,
+					SocialInteraction:   60.0,
+					InformationExchange: 70.0,
+				},
+			},
+			After: &model.AssessmentDocument{
+				Metadata: model.AssessmentMetadata{
+					StudentID:      "S1",
+					Date:           time.Date(2025, 12, 19, 0, 0, 0, 0, time.UTC),
+					AssessmentType: "after",
+				},
+				CommunicativeFuncs: model.CommunicativeFunctions{
+					Control:             45.0,
+					ObtainingDesired:    55.0,
+					SocialInteraction:   65.0,
+					InformationExchange: 75.0,
+				},
+			},
+		},
+		{
+			RequestID: reqID,
+			StudentID: "S2",
+			Before: &model.AssessmentDocument{
+				Metadata: model.AssessmentMetadata{
+					StudentID:      "S2",
+					Date:           time.Date(2025, 12, 18, 0, 0, 0, 0, time.UTC),
+					AssessmentType: "before",
+				},
+				CommunicativeFuncs: model.CommunicativeFunctions{
+					Control:             30.0,
+					ObtainingDesired:    40.0,
+					SocialInteraction:   50.0,
+					InformationExchange: 60.0,
+				},
+			},
+			After: &model.AssessmentDocument{
+				Metadata: model.AssessmentMetadata{
+					StudentID:      "S2",
+					Date:           time.Date(2025, 12, 19, 0, 0, 0, 0, time.UTC),
+					AssessmentType: "after",
+				},
+				CommunicativeFuncs: model.CommunicativeFunctions{
+					Control:             35.0,
+					ObtainingDesired:    45.0,
+					SocialInteraction:   55.0,
+					InformationExchange: 65.0,
+				},
+			},
+		},
 	}
 
 	deadline := time.Now().Add(3 * time.Second)

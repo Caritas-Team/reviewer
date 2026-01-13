@@ -16,12 +16,20 @@ const taskKeyPrefix = "task:"
 var ErrNotFound = errors.New("result not found")
 
 type ProcessingResult struct {
-	Status            string           `json:"status"`
-	ProgressPercent   int              `json:"progress_percent,omitempty"`
-	ProcessedStudents int              `json:"processed_students,omitempty"`
-	TotalStudents     int              `json:"total_students,omitempty"`
-	Results           []AssessmentDiff `json:"results,omitempty"`
-	Error             any              `json:"error,omitempty"`
+	Status                string                 `json:"status"`
+	ProgressPercent       int                    `json:"progress_percent,omitempty"`
+	ProcessedStudents     int                    `json:"processed_students,omitempty"`
+	TotalStudents         int                    `json:"total_students,omitempty"`
+	Results               []AssessmentDiff       `json:"results,omitempty"`
+	Error                 any                    `json:"error,omitempty"`
+	GroupCommFuncsMetrics *GroupCommFuncsMetrics `json:"group_comm_funcs_diff,omitempty"`
+}
+
+type GroupCommFuncsMetrics struct {
+	ControlDelta             float64 `json:"control_delta"`
+	ObtainingDesiredDelta    float64 `json:"obtaining_desired_delta"`
+	SocialInteractionDelta   float64 `json:"social_interaction_delta"`
+	InformationExchangeDelta float64 `json:"information_exchange_delta"`
 }
 
 type ResultStorage struct {

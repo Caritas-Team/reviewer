@@ -2,6 +2,7 @@ package assessment
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/Caritas-Team/reviewer/internal/logger"
@@ -56,12 +57,12 @@ func (w *Worker) handle(ctx context.Context, pairs []model.StudentPair) {
 		return
 	}
 
-	_ = w.storage.Set(ctx, requestID, &ProcessingResult{
-		Status:            "processing",
-		ProgressPercent:   0,
-		ProcessedStudents: 0,
-		TotalStudents:     total,
-	}, w.ttl)
+	var (
+		sumControlBefore, sumControlAfter     float64
+		sumObtainingBefore, sumObtainingAfter float64
+		sumSocialBefore, sumSocialAfter       float64
+		sumInfoBefore, sumInfoAfter           float64
+	)
 
 	results := make([]AssessmentDiff, 0, total)
 
@@ -70,7 +71,21 @@ func (w *Worker) handle(ctx context.Context, pairs []model.StudentPair) {
 			return
 		}
 
-		diff, err := w.processor.Process(ctx, pairs[i])
+		pair := pairs[i]
+
+		if pair.Before == nil || pair.After == nil {
+			err := fmt.Errorf("student %s: Before or After is nil", pair.StudentID)
+			_ = w.storage.Set(ctx, requestID, &ProcessingResult{
+				Status:            "failed",
+				ProgressPercent:   (i * 100) / total,
+				ProcessedStudents: i,
+				TotalStudents:     total,
+				Error:             err.Error(),
+			}, w.ttl)
+			return
+		}
+
+		diff, err := w.processor.Process(ctx, pair)
 		if err != nil {
 			_ = w.storage.Set(ctx, requestID, &ProcessingResult{
 				Status:            "failed",
@@ -82,11 +97,23 @@ func (w *Worker) handle(ctx context.Context, pairs []model.StudentPair) {
 			return
 		}
 
+		before := pair.Before.CommunicativeFuncs
+		after := pair.After.CommunicativeFuncs
+
+		sumControlBefore += before.Control
+		sumControlAfter += after.Control
+		sumObtainingBefore += before.ObtainingDesired
+		sumObtainingAfter += after.ObtainingDesired
+		sumSocialBefore += before.SocialInteraction
+		sumSocialAfter += after.SocialInteraction
+		sumInfoBefore += before.InformationExchange
+		sumInfoAfter += after.InformationExchange
+
 		results = append(results, diff)
 
+		// Обновление прогресса
 		processed := i + 1
 		progress := processed * 100 / total
-
 		_ = w.storage.Set(ctx, requestID, &ProcessingResult{
 			Status:            "processing",
 			ProgressPercent:   progress,
@@ -95,11 +122,21 @@ func (w *Worker) handle(ctx context.Context, pairs []model.StudentPair) {
 		}, w.ttl)
 	}
 
+	//ВЫЧИСЛЯЕМ ГРУППОВУЮ ДЕЛЬТУ
+	n := float64(total)
+	groupComm := &GroupCommFuncsMetrics{
+		ControlDelta:             (sumControlAfter/n - sumControlBefore/n),
+		ObtainingDesiredDelta:    (sumObtainingAfter/n - sumObtainingBefore/n),
+		SocialInteractionDelta:   (sumSocialAfter/n - sumSocialBefore/n),
+		InformationExchangeDelta: (sumInfoAfter/n - sumInfoBefore/n),
+	}
+
 	_ = w.storage.Set(ctx, requestID, &ProcessingResult{
-		Status:            "completed",
-		ProgressPercent:   100,
-		ProcessedStudents: total,
-		TotalStudents:     total,
-		Results:           results,
+		Status:                "completed",
+		ProgressPercent:       100,
+		ProcessedStudents:     total,
+		TotalStudents:         total,
+		Results:               results,
+		GroupCommFuncsMetrics: groupComm,
 	}, w.ttl)
 }
