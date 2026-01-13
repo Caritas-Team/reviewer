@@ -180,17 +180,17 @@ func (h *UploadHandler) UploadAssessmentsHandler(w http.ResponseWriter, r *http.
 	documents, err := h.parseAndValidateFiles(ctx, files)
 	if err != nil {
 		details := make(map[string]any)
-		if strings.Contains(err.Error(), "Идентификатор студента не найден") {
+		if strings.Contains(err.Error(), "идентификатор студента не найден в поле por02") {
 			details["field"] = "por02"
 			details["constraint"] = "required"
-		} else if strings.Contains(err.Error(), "Дата не найдена") {
+		} else if strings.Contains(err.Error(), "дата не найдена в поле por01") {
 			details["field"] = "por01"
 			details["constraint"] = "required"
-		} else if strings.Contains(err.Error(), "Неверный формат даты") {
+		} else if strings.Contains(err.Error(), "неверный формат даты в por01") {
 			details["field"] = "por01"
 			details["format"] = "YYYY-MM-DD"
 			details["constraint"] = "date_format"
-		} else if strings.Contains(err.Error(), "Некорректный формат JSON") {
+		} else if strings.Contains(err.Error(), "не удалось разобрать структуру JSON") {
 			details["constraint"] = "valid_json"
 		}
 
@@ -202,14 +202,14 @@ func (h *UploadHandler) UploadAssessmentsHandler(w http.ResponseWriter, r *http.
 	studentPairs, err := h.createStudentPairs(requestID, documents)
 	if err != nil {
 		details := make(map[string]any)
-		if strings.Contains(err.Error(), "has") && strings.Contains(err.Error(), "documents") {
+		if strings.Contains(err.Error(), "имеет") && strings.Contains(err.Error(), "документов") {
 			parts := strings.Split(err.Error(), "'")
 			if len(parts) >= 2 {
 				details["student_id"] = parts[1]
 			}
-			if strings.Contains(err.Error(), "expected exactly 2") {
+			if strings.Contains(err.Error(), "требуется ровно 2") {
 				details["constraint"] = "exactly_two_per_student"
-			} else if strings.Contains(err.Error(), "same date") {
+			} else if strings.Contains(err.Error(), "с одинаковой датой") {
 				details["constraint"] = "different_dates"
 			}
 		}
