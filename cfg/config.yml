@@ -57,7 +57,7 @@ logging:
 
 # Jaeger
 jaeger:
-    endpoint: "localhost:4318"
+    endpoint: "jaeger:4318"
 
     # Настройка пайплайна
 pipeline:
