@@ -18,22 +18,22 @@ func (p *DocumentParser) Parse(r io.Reader, filename string) (*model.AssessmentD
 
 	var fullRawData FullRawJSON
 	if err := json.NewDecoder(r).Decode(&fullRawData); err != nil {
-		return nil, fmt.Errorf("failed to parse full JSON structure: %w", err)
+		return nil, fmt.Errorf("не удалось разобрать структуру JSON: %w", err)
 	}
 
 	studentID := extractFromDivTag(fullRawData.Por02)
 	if studentID == "" {
-		return nil, fmt.Errorf("student_id not found in por02 field")
+		return nil, fmt.Errorf("идентификатор студента не найден в поле por02")
 	}
 
 	dateStr := extractFromDivTag(fullRawData.Por01)
 	if dateStr == "" {
-		return nil, fmt.Errorf("date not found in por01 field")
+		return nil, fmt.Errorf("дата не найдена в поле por01")
 	}
 
 	date, err := time.Parse("2006-01-02", dateStr)
 	if err != nil {
-		return nil, fmt.Errorf("invalid date format in por01: %w", err)
+		return nil, fmt.Errorf("неверный формат даты в por01: %w", err)
 	}
 
 	// Создаем структурированный документ
@@ -48,17 +48,17 @@ func (p *DocumentParser) Parse(r io.Reader, filename string) (*model.AssessmentD
 
 	// Парсим уровни языкового развития
 	if err := p.parseLanguageLevels(&fullRawData, &doc.LanguageLevels); err != nil {
-		return nil, fmt.Errorf("failed to parse language levels: %w", err)
+		return nil, fmt.Errorf("не удалось разобрать уровни языка: %w", err)
 	}
 
 	// Парсим коммуникативные функции
 	if err := p.parseCommunicativeFunctions(&fullRawData, &doc.CommunicativeFuncs); err != nil {
-		return nil, fmt.Errorf("failed to parse communicative functions: %w", err)
+		return nil, fmt.Errorf("не удалось разобрать коммуникативные функции: %w", err)
 	}
 
 	// Парсим словарный запас
 	if err := p.parseVocabulary(&fullRawData, &doc.Vocabulary); err != nil {
-		return nil, fmt.Errorf("failed to parse vocabulary: %w", err)
+		return nil, fmt.Errorf("не удалось разобрать словарный запас: %w", err)
 	}
 
 	return doc, nil
@@ -111,7 +111,7 @@ func (p *DocumentParser) parseLanguageLevels(raw *FullRawJSON, levels *model.Lan
 		s = strings.TrimSuffix(s, "%")
 		val, err := strconv.ParseFloat(s, 64)
 		if err != nil {
-			return 0.0, fmt.Errorf("invalid percentage format '%s': %w", s, err)
+			return 0.0, fmt.Errorf("неверный формат процента '%s': %w", s, err)
 		}
 		return val, nil
 	}
@@ -119,31 +119,31 @@ func (p *DocumentParser) parseLanguageLevels(raw *FullRawJSON, levels *model.Lan
 	var err error
 
 	if levels.Preintentional.Activity, err = parsePercent(raw.DiagramBlock.PredActProcNumElem); err != nil {
-		return fmt.Errorf("preintentional activity: %w", err)
+		return fmt.Errorf("доинтенциональная активность: %w", err)
 	}
 
 	if levels.Protolanguage.Activity, err = parsePercent(raw.DiagramBlock.ProtActProcNumElem); err != nil {
-		return fmt.Errorf("protolanguage activity: %w", err)
+		return fmt.Errorf("активность протоязыка: %w", err)
 	}
 
 	if levels.Protolanguage.Initiative, err = parsePercent(raw.DiagramBlock.ProtInitProcNumElem); err != nil {
-		return fmt.Errorf("protolanguage initiative: %w", err)
+		return fmt.Errorf("инициатива протоязыка: %w", err)
 	}
 
 	if levels.Holophrase.Activity, err = parsePercent(raw.DiagramBlock.GolActProcNumElem); err != nil {
-		return fmt.Errorf("holophrase activity: %w", err)
+		return fmt.Errorf("активность голофразы: %w", err)
 	}
 
 	if levels.Holophrase.Initiative, err = parsePercent(raw.DiagramBlock.GolInitProcNumElem); err != nil {
-		return fmt.Errorf("holophrase initiative: %w", err)
+		return fmt.Errorf("инициатива голофразы: %w", err)
 	}
 
 	if levels.Phrase.Activity, err = parsePercent(raw.DiagramBlock.FraActProcNumElem); err != nil {
-		return fmt.Errorf("phrase activity: %w", err)
+		return fmt.Errorf("активность фразы: %w", err)
 	}
 
 	if levels.Phrase.Initiative, err = parsePercent(raw.DiagramBlock.FraInitProcNumElem); err != nil {
-		return fmt.Errorf("phrase initiative: %w", err)
+		return fmt.Errorf("инициатива фразы: %w", err)
 	}
 
 	return nil
@@ -159,7 +159,7 @@ func (p *DocumentParser) parseCommunicativeFunctions(raw *FullRawJSON, funcs *mo
 		s = strings.TrimSuffix(s, "%")
 		val, err := strconv.ParseFloat(s, 64)
 		if err != nil {
-			return 0.0, fmt.Errorf("invalid percentage format '%s': %w", s, err)
+			return 0.0, fmt.Errorf("неверный формат процента '%s': %w", s, err)
 		}
 		return val, nil
 	}
@@ -171,15 +171,15 @@ func (p *DocumentParser) parseCommunicativeFunctions(raw *FullRawJSON, funcs *mo
 	}
 
 	if funcs.ObtainingDesired, err = parsePercent(raw.NewAct02.ProcNumElem); err != nil {
-		return fmt.Errorf("obtaining desired: %w", err)
+		return fmt.Errorf("получение желаемого: %w", err)
 	}
 
 	if funcs.SocialInteraction, err = parsePercent(raw.NewAct03.ProcNumElem); err != nil {
-		return fmt.Errorf("social interaction: %w", err)
+		return fmt.Errorf("социальное взаимодействие: %w", err)
 	}
 
 	if funcs.InformationExchange, err = parsePercent(raw.NewAct04.ProcNumElem); err != nil {
-		return fmt.Errorf("information exchange: %w", err)
+		return fmt.Errorf("обмен информацией: %w", err)
 	}
 
 	return nil

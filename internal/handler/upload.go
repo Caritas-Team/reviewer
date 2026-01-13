@@ -71,7 +71,7 @@ func (h *UploadHandler) UploadAssessmentsHandler(w http.ResponseWriter, r *http.
 				"method", r.Method,
 			)
 			h.sendError(w, http.StatusInternalServerError, "internal_error",
-				"Internal server error occurred",
+				"Произошла внутренняя ошибка сервера",
 				map[string]any{"recovered": fmt.Sprintf("%v", err)})
 		}
 	}()
@@ -79,14 +79,14 @@ func (h *UploadHandler) UploadAssessmentsHandler(w http.ResponseWriter, r *http.
 	requestID := r.Header.Get("X-Request-Id")
 	if requestID == "" {
 		h.sendError(w, http.StatusBadRequest, "validation_error",
-			"Missing X-Request-Id header",
+			"Отсутствует заголовок X-Request-Id",
 			map[string]any{"field": "X-Request-Id", "constraint": "required"})
 		return
 	}
 
 	if _, err := uuid.Parse(requestID); err != nil {
 		h.sendError(w, http.StatusBadRequest, "validation_error",
-			"Invalid X-Request-Id format, must be UUID",
+			"Неверный формат X-Request-Id, должен быть UUID",
 			map[string]any{"field": "X-Request-Id", "format": "uuid", "value": requestID})
 		return
 	}
@@ -104,11 +104,11 @@ func (h *UploadHandler) UploadAssessmentsHandler(w http.ResponseWriter, r *http.
 	if err := r.ParseMultipartForm(h.maxTotalSize); err != nil {
 		if errors.Is(err, http.ErrMissingBoundary) {
 			h.sendError(w, http.StatusBadRequest, "validation_error",
-				"Missing multipart boundary",
+				"Отсутствует разделитель multipart данных",
 				map[string]any{"field": "Content-Type", "constraint": "multipart/form-data"})
 		} else if strings.Contains(err.Error(), "request body too large") {
 			h.sendError(w, http.StatusRequestEntityTooLarge, "payload_too_large",
-				"Total file size exceeds 50MB limit",
+				"Общий размер файлов превышает ограничение в 50MB",
 				map[string]any{
 					"max_size_mb": 50,
 					"constraint":  "max_total_size",
@@ -116,7 +116,7 @@ func (h *UploadHandler) UploadAssessmentsHandler(w http.ResponseWriter, r *http.
 		} else {
 			h.log.WithContext(ctx).Error("Failed to parse multipart form", "error", err)
 			h.sendError(w, http.StatusInternalServerError, "internal_error",
-				"Failed to parse form data",
+				"Не удалось разобрать данные формы",
 				map[string]any{"error": err.Error()})
 		}
 		return
@@ -132,14 +132,14 @@ func (h *UploadHandler) UploadAssessmentsHandler(w http.ResponseWriter, r *http.
 	files := r.MultipartForm.File["files"]
 	if len(files) == 0 {
 		h.sendError(w, http.StatusBadRequest, "validation_error",
-			"No files provided in 'files' field",
+			"Не указаны файлы в поле 'files'",
 			map[string]any{"field": "files", "constraint": "required"})
 		return
 	}
 
 	if len(files) < 2 || len(files) > 20 {
 		h.sendError(w, http.StatusBadRequest, "validation_error",
-			fmt.Sprintf("Number of files must be between 2 and 20 (got %d)", len(files)),
+			fmt.Sprintf("Количество файлов должно быть от 2 до 20 (получено %d)", len(files)),
 			map[string]any{
 				"field":      "files",
 				"min_items":  2,
@@ -151,7 +151,7 @@ func (h *UploadHandler) UploadAssessmentsHandler(w http.ResponseWriter, r *http.
 	}
 	if len(files)%2 != 0 {
 		h.sendError(w, http.StatusBadRequest, "validation_error",
-			fmt.Sprintf("Number of files must be even (got %d)", len(files)),
+			fmt.Sprintf("Количество файлов должно быть четным (получено %d)", len(files)),
 			map[string]any{
 				"field":      "files",
 				"got_items":  len(files),
@@ -167,7 +167,7 @@ func (h *UploadHandler) UploadAssessmentsHandler(w http.ResponseWriter, r *http.
 	if totalSize > h.maxTotalSize {
 		receivedSizeMB := float64(totalSize) / (1024 * 1024)
 		h.sendError(w, http.StatusRequestEntityTooLarge, "payload_too_large",
-			fmt.Sprintf("Total file size exceeds 50MB (got %.2fMB)", receivedSizeMB),
+			fmt.Sprintf("Общий размер файлов превышает 50MB (получено %.2fMB)", receivedSizeMB),
 			map[string]any{
 				"max_size_mb":      50,
 				"received_size_mb": fmt.Sprintf("%.2f", receivedSizeMB),
@@ -180,17 +180,17 @@ func (h *UploadHandler) UploadAssessmentsHandler(w http.ResponseWriter, r *http.
 	documents, err := h.parseAndValidateFiles(ctx, files)
 	if err != nil {
 		details := make(map[string]any)
-		if strings.Contains(err.Error(), "student_id not found") {
+		if strings.Contains(err.Error(), "Идентификатор студента не найден") {
 			details["field"] = "por02"
 			details["constraint"] = "required"
-		} else if strings.Contains(err.Error(), "date not found") {
+		} else if strings.Contains(err.Error(), "Дата не найдена") {
 			details["field"] = "por01"
 			details["constraint"] = "required"
-		} else if strings.Contains(err.Error(), "invalid date format") {
+		} else if strings.Contains(err.Error(), "Неверный формат даты") {
 			details["field"] = "por01"
 			details["format"] = "YYYY-MM-DD"
 			details["constraint"] = "date_format"
-		} else if strings.Contains(err.Error(), "invalid JSON") {
+		} else if strings.Contains(err.Error(), "Некорректный формат JSON") {
 			details["constraint"] = "valid_json"
 		}
 
@@ -248,7 +248,7 @@ func (h *UploadHandler) UploadAssessmentsHandler(w http.ResponseWriter, r *http.
 	if err := h.saveTask(ctx, task); err != nil {
 		h.log.WithContext(ctx).Error("Failed to save task", "error", err)
 		h.sendError(w, http.StatusInternalServerError, "internal_error",
-			"Failed to register task",
+			"Не удалось зарегистрировать задачу",
 			map[string]any{"error": err.Error()})
 		return
 	}
@@ -281,13 +281,13 @@ func (h *UploadHandler) parseAndValidateFiles(ctx context.Context, files []*mult
 	for _, fileHeader := range files {
 		file, err := fileHeader.Open()
 		if err != nil {
-			return nil, fmt.Errorf("failed to open file '%s': %w", fileHeader.Filename, err)
+			return nil, fmt.Errorf("не удалось открыть файл '%s': %w", fileHeader.Filename, err)
 		}
 		defer func() { _ = file.Close() }()
 
 		doc, err := h.parser.Parse(file, fileHeader.Filename)
 		if err != nil {
-			return nil, fmt.Errorf("file '%s': %w", fileHeader.Filename, err)
+			return nil, fmt.Errorf("файл '%s': %w", fileHeader.Filename, err)
 		}
 
 		documents = append(documents, *doc)
@@ -314,7 +314,7 @@ func (h *UploadHandler) createStudentPairs(requestID string, documents []model.A
 
 	for studentID, docs := range groups {
 		if len(docs) != 2 {
-			return nil, fmt.Errorf("student '%s' has %d documents, expected exactly 2", studentID, len(docs))
+			return nil, fmt.Errorf("студент '%s' имеет %d документов, требуется ровно 2", studentID, len(docs))
 		}
 
 		// Сортируем по дате (от более ранней к более поздней)
@@ -326,7 +326,7 @@ func (h *UploadHandler) createStudentPairs(requestID string, documents []model.A
 		docs[1].Metadata.AssessmentType = "after"
 
 		if docs[0].Metadata.Date.Equal(docs[1].Metadata.Date) {
-			return nil, fmt.Errorf("student '%s' has documents with same date", studentID)
+			return nil, fmt.Errorf("студент '%s' имеет документы с одинаковой датой", studentID)
 		}
 
 		pair := model.StudentPair{
@@ -370,7 +370,7 @@ func (h *UploadHandler) checkIdempotency(ctx context.Context, requestID string, 
 		}
 		h.log.WithContext(ctx).Error("Failed to check cache for idempotency", "error", err)
 		h.sendError(w, http.StatusInternalServerError, "internal_error",
-			"Failed to check request status",
+			"Не удалось проверить статус запроса",
 			map[string]any{"error": err.Error()})
 		return err
 	}
@@ -388,17 +388,17 @@ func (h *UploadHandler) checkIdempotency(ctx context.Context, requestID string, 
 	switch existingTask.Status {
 	case "processing":
 		h.sendError(w, http.StatusConflict, "conflict",
-			fmt.Sprintf("Request with ID '%s' is already being processed", requestID),
+			fmt.Sprintf("Запрос с ID '%s' уже обрабатывается", requestID),
 			map[string]any{
 				"request_id":     requestID,
 				"current_status": "processing",
 			})
-		return errors.New("request already processing")
+		return errors.New("запрос уже обрабатывается")
 	case "completed":
 		h.sendExistingResult(w, &existingTask)
-		return errors.New("request already completed")
+		return errors.New("запрос уже завершен")
 	case "failed":
-		h.log.WithContext(ctx).Info("Retrying failed request", "request_id", requestID)
+		h.log.WithContext(ctx).Info("Повторная обработка неудачного запроса", "request_id", requestID)
 		return nil
 	default:
 		return nil
@@ -408,12 +408,12 @@ func (h *UploadHandler) checkIdempotency(ctx context.Context, requestID string, 
 func (h *UploadHandler) saveTask(ctx context.Context, task *UploadTask) error {
 	data, err := json.Marshal(task)
 	if err != nil {
-		return fmt.Errorf("failed to marshal task: %w", err)
+		return fmt.Errorf("что-то пошло не так: %w", err)
 	}
 
 	err = h.cache.Set(ctx, fmt.Sprintf("task:%s", task.RequestID), data, time.Hour)
 	if err != nil {
-		return fmt.Errorf("failed to save task to cache: %w", err)
+		return fmt.Errorf("не удалось сохранить задачу в кэше: %w", err)
 	}
 
 	return nil
@@ -434,7 +434,7 @@ func (h *UploadHandler) sendSuccessResponse(w http.ResponseWriter, task *UploadT
 	w.WriteHeader(http.StatusCreated)
 
 	if err := json.NewEncoder(w).Encode(response); err != nil {
-		h.log.Error("Failed to encode success response", "error", err)
+		h.log.Error("Не удалось сформировать ответ об успехе", "error", err)
 	}
 }
 
@@ -442,14 +442,14 @@ func (h *UploadHandler) sendExistingResult(w http.ResponseWriter, task *UploadTa
 	response := map[string]any{
 		"request_id": task.RequestID,
 		"status":     task.Status,
-		"message":    "Request already completed",
+		"message":    "Запрос уже завершен",
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 
 	if err := json.NewEncoder(w).Encode(response); err != nil {
-		h.log.Error("Failed to encode existing result", "error", err)
+		h.log.Error("Не удалось сформировать ответ с существующим результатом", "error", err)
 	}
 }
 
@@ -467,6 +467,6 @@ func (h *UploadHandler) sendError(w http.ResponseWriter, status int, errorType, 
 	w.WriteHeader(status)
 
 	if err := json.NewEncoder(w).Encode(response); err != nil {
-		h.log.Error("Failed to encode error response", "error", err)
+		h.log.Error("Не удалось сформировать ответ с ошибкой", "error", err)
 	}
 }

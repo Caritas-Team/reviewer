@@ -19,7 +19,7 @@ func (p Processor) Process(ctx context.Context, pair model.StudentPair) (Assessm
 	_ = ctx
 
 	if pair.Before == nil || pair.After == nil {
-		return AssessmentDiff{}, fmt.Errorf("student %s: missing before/after document", pair.StudentID)
+		return AssessmentDiff{}, fmt.Errorf("студент %s: отсутствует документ 'до' или 'после'", pair.StudentID)
 	}
 
 	diff, err := p.calc.Calculate(pair.Before, pair.After)

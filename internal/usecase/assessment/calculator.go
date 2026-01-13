@@ -50,7 +50,7 @@ type GeneralProgress struct {
 // Calculate вычисляет различия между двумя документами
 func (dc *DiffCalculator) Calculate(before, after *model.AssessmentDocument) (AssessmentDiff, error) {
 	if before == nil || after == nil {
-		return AssessmentDiff{}, fmt.Errorf("both documents are required")
+		return AssessmentDiff{}, fmt.Errorf("оба документа обязательны для сравнения")
 	}
 
 	// Создаем структуру для различий и заполняем метаданные

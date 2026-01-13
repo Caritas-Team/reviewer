@@ -51,7 +51,7 @@ func (w *Worker) handle(ctx context.Context, pairs []model.StudentPair) {
 		_ = w.storage.Set(ctx, requestID, &ProcessingResult{
 			Status:        "failed",
 			TotalStudents: total,
-			Error:         "processor is nil",
+			Error:         "Процессор не инициализирован",
 		}, w.ttl)
 		return
 	}

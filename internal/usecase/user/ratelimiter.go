@@ -10,7 +10,7 @@ import (
 	"github.com/Caritas-Team/reviewer/internal/memcached"
 )
 
-var ErrRateLimitExceeded = errors.New("too many requests")
+var ErrRateLimitExceeded = errors.New("слишком много запросов")
 
 type RateLimiter struct {
 	cache    memcached.CacheInterface
