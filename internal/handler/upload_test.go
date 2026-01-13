@@ -158,7 +158,7 @@ func TestUploadHandler_ValidationScenarios(t *testing.T) {
 				return req
 			},
 			expectedStatus: http.StatusBadRequest,
-			expectedError:  "Missing X-Request-Id header",
+			expectedError:  "Отсутствует заголовок X-Request-Id",
 			checkDetails: func(t *testing.T, response map[string]any) {
 				details, ok := response["details"].(map[string]any)
 				assert.True(t, ok, "Response should contain details")
@@ -191,7 +191,7 @@ func TestUploadHandler_ValidationScenarios(t *testing.T) {
 				return req
 			},
 			expectedStatus: http.StatusBadRequest,
-			expectedError:  "Invalid X-Request-Id format",
+			expectedError:  "Неверный формат X-Request-Id",
 			checkDetails: func(t *testing.T, response map[string]any) {
 				details, ok := response["details"].(map[string]any)
 				assert.True(t, ok, "Response should contain details")
@@ -224,7 +224,7 @@ func TestUploadHandler_ValidationScenarios(t *testing.T) {
 				return req
 			},
 			expectedStatus: http.StatusBadRequest,
-			expectedError:  "Number of files must be even",
+			expectedError:  "Количество файлов должно быть четным",
 			checkDetails: func(t *testing.T, response map[string]any) {
 				details, ok := response["details"].(map[string]any)
 				assert.True(t, ok, "Response should contain details")
@@ -263,7 +263,7 @@ func TestUploadHandler_ValidationScenarios(t *testing.T) {
 				return req
 			},
 			expectedStatus: http.StatusRequestEntityTooLarge,
-			expectedError:  "Total file size exceeds 50MB",
+			expectedError:  "Общий размер файлов превышает 50MB",
 			checkDetails: func(t *testing.T, response map[string]any) {
 				details, ok := response["details"].(map[string]any)
 				assert.True(t, ok, "Response should contain details")
@@ -299,7 +299,7 @@ func TestUploadHandler_ValidationScenarios(t *testing.T) {
 				return req
 			},
 			expectedStatus: http.StatusBadRequest,
-			expectedError:  "has 1 documents, expected exactly 2",
+			expectedError:  "имеет 1 документов, требуется ровно 2",
 			checkDetails: func(t *testing.T, response map[string]any) {
 				details, ok := response["details"].(map[string]any)
 				assert.True(t, ok, "Response should contain details")
@@ -599,7 +599,7 @@ func TestUploadHandler_Idempotency(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t, "conflict", response["error"])
-	assert.Contains(t, response["message"], "already being processed")
+	assert.Contains(t, response["message"], "уже обрабатывается")
 }
 
 func createTestFile(t *testing.T, writer *multipart.Writer, filename, content string) {
