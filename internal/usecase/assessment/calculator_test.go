@@ -371,3 +371,32 @@ func TestDiffCalculator_CalculateGroupProgress(t *testing.T) {
 		assert.Contains(t, err.Error(), "valid dates")
 	})
 }
+
+func TestCalculateGroupProgress_InitiativeDiff(t *testing.T) {
+	calc := &DiffCalculator{}
+
+	earlier := GroupAverage{
+		Date: "2025-12-12",
+		LanguageLevels: model.LanguageDevelopment{
+			Protolanguage: model.LanguageActivity{Initiative: 20},
+			Holophrase:    model.LanguageActivity{Initiative: 30},
+			Phrase:        model.LanguageActivity{Initiative: 40},
+		},
+	}
+
+	later := GroupAverage{
+		Date: "2025-12-15",
+		LanguageLevels: model.LanguageDevelopment{
+			Protolanguage: model.LanguageActivity{Initiative: 35},
+			Holophrase:    model.LanguageActivity{Initiative: 25},
+			Phrase:        model.LanguageActivity{Initiative: 40},
+		},
+	}
+
+	progress, err := calc.CalculateGroupProgress(earlier, later)
+	require.NoError(t, err)
+
+	assert.Equal(t, 15.0, progress.LanguageLevels.Protolanguage.InitiativeDiff)
+	assert.Equal(t, -5.0, progress.LanguageLevels.Holophrase.InitiativeDiff)
+	assert.Equal(t, 0.0, progress.LanguageLevels.Phrase.InitiativeDiff)
+}
