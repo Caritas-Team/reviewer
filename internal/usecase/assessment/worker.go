@@ -102,6 +102,14 @@ func (w *Worker) handle(ctx context.Context, pairs []model.StudentPair) {
 	// Рассчитываем прогресс группы между датами
 	groupProgress := w.calculateGroupProgress(groupAverages)
 
+	var groupDiff *GroupDiff
+
+	if len(groupAverages) == 2 {
+		calc := &DiffCalculator{}
+		diff := calc.CalculateGroupDiff(groupAverages[0], groupAverages[1])
+		groupDiff = &diff
+	}
+
 	_ = w.storage.Set(ctx, requestID, &ProcessingResult{
 		Status:            "completed",
 		ProgressPercent:   100,
@@ -110,6 +118,7 @@ func (w *Worker) handle(ctx context.Context, pairs []model.StudentPair) {
 		Results:           results,
 		GroupAverages:     groupAverages,
 		GroupProgress:     groupProgress,
+		GroupDiff:         groupDiff,
 	}, w.ttl)
 }
 

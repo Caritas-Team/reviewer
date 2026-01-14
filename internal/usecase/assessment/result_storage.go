@@ -23,6 +23,7 @@ type ProcessingResult struct {
 	Results           []AssessmentDiff `json:"results,omitempty"`
 	GroupAverages     []GroupAverage   `json:"group_averages,omitempty"`
 	GroupProgress     []GroupProgress  `json:"group_progress,omitempty"`
+	GroupDiff         *GroupDiff       `json:"group_diff,omitempty"`
 	Error             any              `json:"error,omitempty"`
 }
 

@@ -63,6 +63,11 @@ type GroupProgress struct {
 	LanguageLevels GroupLanguageLevels `json:"language_levels"` // Прогресс по уровням
 }
 
+type GroupDiff struct {
+	LangDevDiff   LangDevDiffWithInitiative `json:"lang_dev_diff"`
+	CommFuncsDiff CommFuncsDiff             `json:"comm_funcs_diff"`
+}
+
 // GroupLanguageLevels прогресс по четырем параметрам
 type GroupLanguageLevels struct {
 	Preintentional GroupLevelProgress `json:"preintentional"` // Доинтенциональная коммуникация
@@ -269,4 +274,43 @@ func calculatePercentChange(before, after float64) float64 {
 		return 100.0
 	}
 	return ((after - before) / before) * 100.0
+}
+
+type LangActivityDelta struct {
+	Activity   float64 `json:"activity"`
+	Initiative float64 `json:"initiative"`
+}
+
+type LangDevDiffWithInitiative struct {
+	PreintentionalDelta float64           `json:"preintentional_delta"`
+	ProtolanguageDelta  LangActivityDelta `json:"protolanguage_delta"`
+	HolophraseDelta     LangActivityDelta `json:"holophrase_delta"`
+	PhraseDelta         LangActivityDelta `json:"phrase_delta"`
+}
+
+// вычисляет абсолютные разницы между двумя групповыми средними
+func (dc *DiffCalculator) CalculateGroupDiff(earlier, later GroupAverage) GroupDiff {
+	return GroupDiff{
+		CommFuncsDiff: CommFuncsDiff{
+			ControlDelta:             later.CommunicativeFuncs.Control - earlier.CommunicativeFuncs.Control,
+			ObtainingDesiredDelta:    later.CommunicativeFuncs.ObtainingDesired - earlier.CommunicativeFuncs.ObtainingDesired,
+			SocialInteractionDelta:   later.CommunicativeFuncs.SocialInteraction - earlier.CommunicativeFuncs.SocialInteraction,
+			InformationExchangeDelta: later.CommunicativeFuncs.InformationExchange - earlier.CommunicativeFuncs.InformationExchange,
+		},
+		LangDevDiff: LangDevDiffWithInitiative{
+			PreintentionalDelta: later.LanguageLevels.Preintentional.Activity - earlier.LanguageLevels.Preintentional.Activity,
+			ProtolanguageDelta: LangActivityDelta{
+				Activity:   later.LanguageLevels.Protolanguage.Activity - earlier.LanguageLevels.Protolanguage.Activity,
+				Initiative: later.LanguageLevels.Protolanguage.Initiative - earlier.LanguageLevels.Protolanguage.Initiative,
+			},
+			HolophraseDelta: LangActivityDelta{
+				Activity:   later.LanguageLevels.Holophrase.Activity - earlier.LanguageLevels.Holophrase.Activity,
+				Initiative: later.LanguageLevels.Holophrase.Initiative - earlier.LanguageLevels.Holophrase.Initiative,
+			},
+			PhraseDelta: LangActivityDelta{
+				Activity:   later.LanguageLevels.Phrase.Activity - earlier.LanguageLevels.Phrase.Activity,
+				Initiative: later.LanguageLevels.Phrase.Initiative - earlier.LanguageLevels.Phrase.Initiative,
+			},
+		},
+	}
 }

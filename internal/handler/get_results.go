@@ -32,6 +32,7 @@ type AssessmentCompletedResponse struct {
 	Results       []assessment.AssessmentDiff `json:"results"`
 	GroupAverages []assessment.GroupAverage   `json:"group_averages,omitempty"`
 	GroupProgress []assessment.GroupProgress  `json:"group_progress,omitempty"`
+	GroupDiff     *assessment.GroupDiff       `json:"group_diff,omitempty"`
 }
 
 type AssessmentFailedResponse struct {
@@ -90,6 +91,7 @@ func respond(w http.ResponseWriter, res *assessment.ProcessingResult) {
 			Results:       res.Results,
 			GroupAverages: res.GroupAverages,
 			GroupProgress: res.GroupProgress,
+			GroupDiff:     res.GroupDiff,
 		})
 	case "failed":
 		writeJSON(w, http.StatusOK, AssessmentFailedResponse{
@@ -151,7 +153,6 @@ func GetAssessmentResultsHandler(storage *assessment.ResultStorage, log *logger.
 			}
 			res = final
 		}
-
 		respond(w, res)
 	}
 }
