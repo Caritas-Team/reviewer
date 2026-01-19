@@ -93,7 +93,7 @@ func respond(w http.ResponseWriter, res *assessment.ProcessingResult) {
 			Error:  res.Error,
 		})
 	default:
-		writeError(w, http.StatusInternalServerError, "Unknown status")
+		writeError(w, http.StatusInternalServerError, "Что-то пошло не так")
 	}
 }
 
@@ -102,11 +102,11 @@ func getOrWriteError(w http.ResponseWriter, log *logger.Logger, err error, reque
 		return false
 	}
 	if errors.Is(err, assessment.ErrNotFound) {
-		writeError(w, http.StatusNotFound, "Result not found")
+		writeError(w, http.StatusNotFound, "Результат не найден")
 		return true
 	}
 	log.Error("assessment results get failed", "request_id", requestID, "err", err)
-	writeError(w, http.StatusInternalServerError, "Internal server error")
+	writeError(w, http.StatusInternalServerError, "Внутренняя ошибка сервера")
 	return true
 }
 
@@ -119,17 +119,17 @@ func GetAssessmentResultsHandler(storage *assessment.ResultStorage, log *logger.
 
 		requestID := extractRequestID(r)
 		if requestID == "" {
-			writeError(w, http.StatusBadRequest, "Missing request_id")
+			writeError(w, http.StatusBadRequest, "Отсутствует request_id")
 			return
 		}
 		if _, err := uuid.Parse(requestID); err != nil {
-			writeError(w, http.StatusBadRequest, "Invalid request_id format")
+			writeError(w, http.StatusBadRequest, "Неверный формат request_id")
 			return
 		}
 
 		keepInCache, err := parseBoolQuery(r, "keep_in_cache")
 		if err != nil {
-			writeError(w, http.StatusBadRequest, "Invalid keep_in_cache parameter")
+			writeError(w, http.StatusBadRequest, "Неверный параметр keep_in_cache")
 			return
 		}
 

@@ -76,7 +76,7 @@ func (m *RateLimiterMiddleware) Handler(next http.Handler) http.Handler {
 
 		err := m.limiter.AllowRequest(r.Context(), ip)
 		if err != nil {
-			http.Error(w, "Too many requests", http.StatusTooManyRequests)
+			http.Error(w, "Слишком много запросов", http.StatusTooManyRequests)
 			return
 		}
 

@@ -13,7 +13,7 @@ import (
 
 const taskKeyPrefix = "task:"
 
-var ErrNotFound = errors.New("result not found")
+var ErrNotFound = errors.New("результат не найден")
 
 type ProcessingResult struct {
 	Status            string           `json:"status"`
@@ -34,10 +34,10 @@ func NewResultStorage(cache memcached.CacheInterface) *ResultStorage {
 
 func (s *ResultStorage) Set(ctx context.Context, requestID string, res *ProcessingResult, ttl time.Duration) error {
 	if res == nil {
-		return errors.New("nil result")
+		return errors.New("передан пустой результат")
 	}
 	if res.Status == "" {
-		return errors.New("empty status")
+		return errors.New("отсутствует статус результата")
 	}
 
 	b, err := json.Marshal(res)
@@ -63,7 +63,7 @@ func (s *ResultStorage) Get(ctx context.Context, requestID string) (*ProcessingR
 		return nil, err
 	}
 	if res.Status == "" {
-		return nil, errors.New("invalid cached result: empty status")
+		return nil, errors.New("некорректный результат в кэше: отсутствует статус")
 	}
 	return &res, nil
 }
@@ -83,7 +83,7 @@ func (s *ResultStorage) GetAndDelete(ctx context.Context, requestID string, keep
 		return nil, err
 	}
 	if res.Status == "" {
-		return nil, errors.New("invalid cached result: empty status")
+		return nil, errors.New("некорректный результат в кэше: отсутствует статус")
 	}
 
 	switch res.Status {

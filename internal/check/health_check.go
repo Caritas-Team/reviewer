@@ -20,7 +20,7 @@ func JSONResponse(w http.ResponseWriter, statusCode int, status string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
 	if err := json.NewEncoder(w).Encode(response); err != nil {
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		http.Error(w, "Ошибка сервера", http.StatusInternalServerError)
 	}
 }
 
