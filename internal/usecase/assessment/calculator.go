@@ -74,6 +74,7 @@ type GroupLanguageLevels struct {
 // GroupLevelProgress прогресс отдельного уровня
 type GroupLevelProgress struct {
 	ActivityPercent float64 `json:"activity_percent"` // Прогресс в процентах
+	InitiativeDiff  float64 `json:"initiative_diff"`  // diff Инициативы в процентах
 }
 
 // Calculate вычисляет различия между двумя документами
@@ -247,14 +248,31 @@ func (dc *DiffCalculator) CalculateGroupProgress(earlierAvg, laterAvg GroupAvera
 		laterAvg.LanguageLevels.Phrase.Activity,
 	)
 
+	//Расчитываем diff инициативы
+	protInitDiff := laterAvg.LanguageLevels.Protolanguage.Initiative - earlierAvg.LanguageLevels.Protolanguage.Initiative
+	goloInitDiff := laterAvg.LanguageLevels.Holophrase.Initiative - earlierAvg.LanguageLevels.Holophrase.Initiative
+	fraInitDiff := laterAvg.LanguageLevels.Phrase.Initiative - earlierAvg.LanguageLevels.Phrase.Initiative
+
 	return GroupProgress{
 		PeriodStart: earlierAvg.Date,
 		PeriodEnd:   laterAvg.Date,
 		LanguageLevels: GroupLanguageLevels{
-			Preintentional: GroupLevelProgress{ActivityPercent: preintentionalPercent},
-			Protolanguage:  GroupLevelProgress{ActivityPercent: protolanguagePercent},
-			Holophrase:     GroupLevelProgress{ActivityPercent: holophrasePercent},
-			Phrase:         GroupLevelProgress{ActivityPercent: phrasePercent},
+			Preintentional: GroupLevelProgress{
+				ActivityPercent: preintentionalPercent,
+				InitiativeDiff:  0, // инициативы нет
+			},
+			Protolanguage: GroupLevelProgress{
+				ActivityPercent: protolanguagePercent,
+				InitiativeDiff:  protInitDiff,
+			},
+			Holophrase: GroupLevelProgress{
+				ActivityPercent: holophrasePercent,
+				InitiativeDiff:  goloInitDiff,
+			},
+			Phrase: GroupLevelProgress{
+				ActivityPercent: phrasePercent,
+				InitiativeDiff:  fraInitDiff,
+			},
 		},
 	}, nil
 }
