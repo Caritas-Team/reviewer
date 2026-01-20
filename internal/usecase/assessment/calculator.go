@@ -47,6 +47,35 @@ type GeneralProgress struct {
 	AverageProgress float64 `json:"average_progress"`
 }
 
+// GroupAverage - средние значения по группе за конкретную дату
+type GroupAverage struct {
+	Date               string                       `json:"date"`                // Дата в формате "2006-01-02"
+	LanguageLevels     model.LanguageDevelopment    `json:"language_levels"`     // Средние значения уровней развития
+	CommunicativeFuncs model.CommunicativeFunctions `json:"communicative_funcs"` // Средние значения коммуникативных функций
+	Vocabulary         model.VocabularyData         `json:"vocabulary"`          // Средние значения словарного запаса
+	StudentsCount      int                          `json:"students_count"`      // Количество студентов в группе
+}
+
+// GroupProgress - прогресс группы по датам
+type GroupProgress struct {
+	PeriodStart    string              `json:"period_start"`    // Начальная дата
+	PeriodEnd      string              `json:"period_end"`      // Конечная дата
+	LanguageLevels GroupLanguageLevels `json:"language_levels"` // Прогресс по уровням
+}
+
+// GroupLanguageLevels прогресс по четырем параметрам
+type GroupLanguageLevels struct {
+	Preintentional GroupLevelProgress `json:"preintentional"` // Доинтенциональная коммуникация
+	Protolanguage  GroupLevelProgress `json:"protolanguage"`  // Протоязык
+	Holophrase     GroupLevelProgress `json:"holophrase"`     // Голофраза
+	Phrase         GroupLevelProgress `json:"phrase"`         // Фраза
+}
+
+// GroupLevelProgress прогресс отдельного уровня
+type GroupLevelProgress struct {
+	ActivityPercent float64 `json:"activity_percent"` // Прогресс в процентах
+}
+
 // Calculate вычисляет различия между двумя документами
 func (dc *DiffCalculator) Calculate(before, after *model.AssessmentDocument) (AssessmentDiff, error) {
 	if before == nil || after == nil {
@@ -114,4 +143,130 @@ func (dc *DiffCalculator) avg(lang LangDevDiff, comm CommFuncsDiff) float64 {
 		sum += v
 	}
 	return sum / float64(len(values))
+}
+
+// CalculateGroupAverage вычисляет средние значения по группе документов
+func (dc *DiffCalculator) CalculateGroupAverage(documents []*model.AssessmentDocument) (GroupAverage, error) {
+	if len(documents) == 0 {
+		return GroupAverage{}, fmt.Errorf("empty documents list")
+	}
+
+	date := documents[0].Metadata.Date.Format("2006-01-02")
+
+	var sumLangDev model.LanguageDevelopment
+	var sumCommFuncs model.CommunicativeFunctions
+	var sumVocab model.VocabularyData
+	count := len(documents)
+
+	for _, doc := range documents {
+		if doc.Metadata.Date.Format("2006-01-02") != date {
+			return GroupAverage{}, fmt.Errorf("documents have different dates")
+		}
+
+		sumLangDev.Preintentional.Activity += doc.LanguageLevels.Preintentional.Activity
+		sumLangDev.Protolanguage.Activity += doc.LanguageLevels.Protolanguage.Activity
+		sumLangDev.Protolanguage.Initiative += doc.LanguageLevels.Protolanguage.Initiative
+		sumLangDev.Holophrase.Activity += doc.LanguageLevels.Holophrase.Activity
+		sumLangDev.Holophrase.Initiative += doc.LanguageLevels.Holophrase.Initiative
+		sumLangDev.Phrase.Activity += doc.LanguageLevels.Phrase.Activity
+		sumLangDev.Phrase.Initiative += doc.LanguageLevels.Phrase.Initiative
+
+		sumCommFuncs.Control += doc.CommunicativeFuncs.Control
+		sumCommFuncs.ObtainingDesired += doc.CommunicativeFuncs.ObtainingDesired
+		sumCommFuncs.SocialInteraction += doc.CommunicativeFuncs.SocialInteraction
+		sumCommFuncs.InformationExchange += doc.CommunicativeFuncs.InformationExchange
+
+		sumVocab.ActiveWordsCount += doc.Vocabulary.ActiveWordsCount
+		sumVocab.TotalWordsCount += doc.Vocabulary.TotalWordsCount
+	}
+
+	avgLangDev := model.LanguageDevelopment{
+		Preintentional: model.Preintentional{
+			Activity: sumLangDev.Preintentional.Activity / float64(count),
+		},
+		Protolanguage: model.LanguageActivity{
+			Activity:   sumLangDev.Protolanguage.Activity / float64(count),
+			Initiative: sumLangDev.Protolanguage.Initiative / float64(count),
+		},
+		Holophrase: model.LanguageActivity{
+			Activity:   sumLangDev.Holophrase.Activity / float64(count),
+			Initiative: sumLangDev.Holophrase.Initiative / float64(count),
+		},
+		Phrase: model.LanguageActivity{
+			Activity:   sumLangDev.Phrase.Activity / float64(count),
+			Initiative: sumLangDev.Phrase.Initiative / float64(count),
+		},
+	}
+
+	avgCommFuncs := model.CommunicativeFunctions{
+		Control:             sumCommFuncs.Control / float64(count),
+		ObtainingDesired:    sumCommFuncs.ObtainingDesired / float64(count),
+		SocialInteraction:   sumCommFuncs.SocialInteraction / float64(count),
+		InformationExchange: sumCommFuncs.InformationExchange / float64(count),
+	}
+
+	avgVocab := model.VocabularyData{
+		ActiveWordsCount: sumVocab.ActiveWordsCount / count,
+		TotalWordsCount:  sumVocab.TotalWordsCount / count,
+		AdditionalWords:  nil, // Не суммируем, это список строк
+	}
+
+	return GroupAverage{
+		Date:               date,
+		LanguageLevels:     avgLangDev,
+		CommunicativeFuncs: avgCommFuncs,
+		Vocabulary:         avgVocab,
+		StudentsCount:      count,
+	}, nil
+}
+
+// CalculateGroupProgress рассчитывает прогресс группы между двумя датами
+func (dc *DiffCalculator) CalculateGroupProgress(earlierAvg, laterAvg GroupAverage) (GroupProgress, error) {
+	if earlierAvg.Date == "" || laterAvg.Date == "" {
+		return GroupProgress{}, fmt.Errorf("both group averages must have valid dates")
+	}
+
+	// Рассчитываем процентный прогресс для каждого уровня
+	preintentionalPercent := calculatePercentChange(
+		earlierAvg.LanguageLevels.Preintentional.Activity,
+		laterAvg.LanguageLevels.Preintentional.Activity,
+	)
+
+	protolanguagePercent := calculatePercentChange(
+		earlierAvg.LanguageLevels.Protolanguage.Activity,
+		laterAvg.LanguageLevels.Protolanguage.Activity,
+	)
+
+	holophrasePercent := calculatePercentChange(
+		earlierAvg.LanguageLevels.Holophrase.Activity,
+		laterAvg.LanguageLevels.Holophrase.Activity,
+	)
+
+	phrasePercent := calculatePercentChange(
+		earlierAvg.LanguageLevels.Phrase.Activity,
+		laterAvg.LanguageLevels.Phrase.Activity,
+	)
+
+	return GroupProgress{
+		PeriodStart: earlierAvg.Date,
+		PeriodEnd:   laterAvg.Date,
+		LanguageLevels: GroupLanguageLevels{
+			Preintentional: GroupLevelProgress{ActivityPercent: preintentionalPercent},
+			Protolanguage:  GroupLevelProgress{ActivityPercent: protolanguagePercent},
+			Holophrase:     GroupLevelProgress{ActivityPercent: holophrasePercent},
+			Phrase:         GroupLevelProgress{ActivityPercent: phrasePercent},
+		},
+	}, nil
+}
+
+// calculatePercentChange рассчитывает процентное изменение
+func calculatePercentChange(before, after float64) float64 {
+	if before == 0 {
+
+		if after == 0 {
+			return 0
+		}
+		return 100.0
+	}
+	return ((after - before) / before) * 100.0
 }
