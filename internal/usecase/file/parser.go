@@ -78,6 +78,18 @@ type DiagramBlock struct {
 	FraInitProcNumElem  string `json:"fraInitProcNumElem"`
 }
 
+type ActBlock01 struct {
+	ProtSforProcElem  ProcNumElem `json:"protSforProcElem"`
+	ProtInitProcElem  ProcNumElem `json:"protInitProcElem"`
+	ProtChastProcElem ProcNumElem `json:"protChastProcElem"`
+	GolSforProcElem   ProcNumElem `json:"golSforProcElem"`
+	GolInitProcElem   ProcNumElem `json:"golInitProcElem"`
+	GolChastProcElem  ProcNumElem `json:"golChastProcElem"`
+	FraSforProcElem   ProcNumElem `json:"fraSforProcElem"`
+	FraInitProcElem   ProcNumElem `json:"fraInitProcElem"`
+	FraChastProcElem  ProcNumElem `json:"fraChastProcElem"`
+}
+
 type FullRawJSON struct {
 	Por01    string      `json:"por01"` // Дата в формате <div>2025-11-11</div>
 	Por02    string      `json:"por02"` // Student ID в формате <div>123</div>
@@ -90,6 +102,8 @@ type FullRawJSON struct {
 
 	BasicDictionary []BasicDictionaryItem `json:"basicDictionary"`
 	DictBasicMore   []string              `json:"dictBasicMore"`
+
+	ActBlock01 ActBlock01 `json:"actBlock01"`
 }
 
 type BasicDictionaryItem struct {
@@ -217,4 +231,40 @@ func extractFromDivTag(divContent string) string {
 	content = strings.TrimSpace(content)
 
 	return content
+}
+
+// parseActBlockData парсит данные из actBlock01 полей
+func (p *DocumentParser) parseActBlockData(raw *FullRawJSON, doc *model.AssessmentDocument) {
+	// Функция для парсинга ProcNumElem в float64
+	parseProcNumElem := func(elem ProcNumElem) float64 {
+		if elem.ProcNumElem == "" {
+			return 0
+		}
+
+		s := strings.TrimSpace(elem.ProcNumElem)
+		s = strings.TrimSuffix(s, "%")
+		if s == "" {
+			return 0
+		}
+
+		val, err := strconv.ParseFloat(s, 64)
+		if err != nil {
+			return 0
+		}
+
+		return val
+	}
+
+	// Парсим все поля
+	doc.ActBlock.Prot.ActivityPercent = parseProcNumElem(raw.ActBlock01.ProtSforProcElem)
+	doc.ActBlock.Prot.InitiativePercent = parseProcNumElem(raw.ActBlock01.ProtInitProcElem)
+	doc.ActBlock.Prot.FrequencyPercent = parseProcNumElem(raw.ActBlock01.ProtChastProcElem)
+
+	doc.ActBlock.Gol.ActivityPercent = parseProcNumElem(raw.ActBlock01.GolSforProcElem)
+	doc.ActBlock.Gol.InitiativePercent = parseProcNumElem(raw.ActBlock01.GolInitProcElem)
+	doc.ActBlock.Gol.FrequencyPercent = parseProcNumElem(raw.ActBlock01.GolChastProcElem)
+
+	doc.ActBlock.Fra.ActivityPercent = parseProcNumElem(raw.ActBlock01.FraSforProcElem)
+	doc.ActBlock.Fra.InitiativePercent = parseProcNumElem(raw.ActBlock01.FraInitProcElem)
+	doc.ActBlock.Fra.FrequencyPercent = parseProcNumElem(raw.ActBlock01.FraChastProcElem)
 }
