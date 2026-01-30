@@ -60,6 +60,8 @@ func (p *DocumentParser) Parse(r io.Reader, filename string) (*model.AssessmentD
 	if err := p.parseVocabulary(&fullRawData, &doc.Vocabulary); err != nil {
 		return nil, fmt.Errorf("не удалось разобрать словарный запас: %w", err)
 	}
+	// Парсим actBlock01 данные
+	p.parseActBlockData(&fullRawData, doc)
 
 	return doc, nil
 }
