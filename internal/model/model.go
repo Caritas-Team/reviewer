@@ -10,6 +10,7 @@ type AssessmentDocument struct {
 	LanguageLevels     LanguageDevelopment    `json:"language_levels"`
 	CommunicativeFuncs CommunicativeFunctions `json:"communicative_functions"`
 	Vocabulary         VocabularyData         `json:"vocabulary"`
+	ActBlock           ActBlockData           `json:"act_block,omitempty"`
 }
 
 // AssessmentMetadata метаданные оценки
@@ -77,4 +78,18 @@ type ProcessingError struct {
 	RequestID string `json:"request_id"` // ID запроса
 	StudentID string `json:"student_id"` // ID студента
 	Message   string `json:"message"`    // Сообщение об ошибке
+}
+
+// ActivityData данные по активности уровня
+type ActivityData struct {
+	ActivityPercent   float64 `json:"activity_percent,omitempty"`
+	InitiativePercent float64 `json:"initiative_percent,omitempty"`
+	FrequencyPercent  float64 `json:"frequency_percent,omitempty"`
+}
+
+// ActBlockData структура для хранения данных из actBlock01
+type ActBlockData struct {
+	Prot ActivityData `json:"prot,omitempty"`
+	Gol  ActivityData `json:"gol,omitempty"`
+	Fra  ActivityData `json:"fra,omitempty"`
 }
