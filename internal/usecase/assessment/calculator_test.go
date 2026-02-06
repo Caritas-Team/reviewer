@@ -13,7 +13,7 @@ func TestDiffCalculator_CalculateGroupAverage(t *testing.T) {
 	calc := &DiffCalculator{}
 
 	// Helper для создания документа
-	createDoc := func(studentID, dateStr string, langDev model.LanguageDevelopment, commFuncs model.CommunicativeFunctions, vocab model.VocabularyData) *model.AssessmentDocument {
+	createDoc := func(studentID, dateStr string, langDev model.LanguageDevelopment, commFuncs model.CommunicativeFunctions, vocab model.VocabularyData, actBlock model.ActBlockData) *model.AssessmentDocument {
 		date, _ := time.Parse("2006-01-02", dateStr)
 		return &model.AssessmentDocument{
 			Metadata: model.AssessmentMetadata{
@@ -23,6 +23,7 @@ func TestDiffCalculator_CalculateGroupAverage(t *testing.T) {
 			LanguageLevels:     langDev,
 			CommunicativeFuncs: commFuncs,
 			Vocabulary:         vocab,
+			ActBlock:           actBlock,
 		}
 	}
 
@@ -53,6 +54,23 @@ func TestDiffCalculator_CalculateGroupAverage(t *testing.T) {
 				ActiveWordsCount: 100,
 				TotalWordsCount:  150,
 			},
+			model.ActBlockData{
+				Prot: model.ActivityData{
+					ActivityPercent:   90.0,
+					InitiativePercent: 80.0,
+					FrequencyPercent:  90.0,
+				},
+				Gol: model.ActivityData{
+					ActivityPercent:   7.0,
+					InitiativePercent: 33.0,
+					FrequencyPercent:  90.0,
+				},
+				Fra: model.ActivityData{
+					ActivityPercent:   0,
+					InitiativePercent: 0,
+					FrequencyPercent:  0,
+				},
+			},
 		)
 
 		avg, err := calc.CalculateGroupAverage([]*model.AssessmentDocument{doc})
@@ -65,6 +83,16 @@ func TestDiffCalculator_CalculateGroupAverage(t *testing.T) {
 		assert.Equal(t, 10.0, avg.CommunicativeFuncs.Control)
 		assert.Equal(t, 100, avg.Vocabulary.ActiveWordsCount)
 		assert.Equal(t, 150, avg.Vocabulary.TotalWordsCount)
+
+		assert.Equal(t, 90.0, avg.ActBlock.Prot.ActivityPercent)
+		assert.Equal(t, 80.0, avg.ActBlock.Prot.InitiativePercent)
+		assert.Equal(t, 90.0, avg.ActBlock.Prot.FrequencyPercent)
+		assert.Equal(t, 7.0, avg.ActBlock.Gol.ActivityPercent)
+		assert.Equal(t, 33.0, avg.ActBlock.Gol.InitiativePercent)
+		assert.Equal(t, 90.0, avg.ActBlock.Gol.FrequencyPercent)
+		assert.Equal(t, 0.0, avg.ActBlock.Fra.ActivityPercent)
+		assert.Equal(t, 0.0, avg.ActBlock.Fra.InitiativePercent)
+		assert.Equal(t, 0.0, avg.ActBlock.Fra.FrequencyPercent)
 	})
 
 	t.Run("three students on December 12th", func(t *testing.T) {
@@ -89,6 +117,23 @@ func TestDiffCalculator_CalculateGroupAverage(t *testing.T) {
 					ActiveWordsCount: 100,
 					TotalWordsCount:  150,
 				},
+				model.ActBlockData{
+					Prot: model.ActivityData{
+						ActivityPercent:   90.0,
+						InitiativePercent: 80.0,
+						FrequencyPercent:  90.0,
+					},
+					Gol: model.ActivityData{
+						ActivityPercent:   7.0,
+						InitiativePercent: 33.0,
+						FrequencyPercent:  90.0,
+					},
+					Fra: model.ActivityData{
+						ActivityPercent:   0,
+						InitiativePercent: 0,
+						FrequencyPercent:  0,
+					},
+				},
 			),
 			// Student B
 			createDoc(
@@ -110,6 +155,23 @@ func TestDiffCalculator_CalculateGroupAverage(t *testing.T) {
 					ActiveWordsCount: 120,
 					TotalWordsCount:  180,
 				},
+				model.ActBlockData{
+					Prot: model.ActivityData{
+						ActivityPercent:   68.0,
+						InitiativePercent: 80.0,
+						FrequencyPercent:  50.0,
+					},
+					Gol: model.ActivityData{
+						ActivityPercent:   0.0,
+						InitiativePercent: 0.0,
+						FrequencyPercent:  0.0,
+					},
+					Fra: model.ActivityData{
+						ActivityPercent:   0,
+						InitiativePercent: 0,
+						FrequencyPercent:  0,
+					},
+				},
 			),
 			// Student C
 			createDoc(
@@ -130,6 +192,23 @@ func TestDiffCalculator_CalculateGroupAverage(t *testing.T) {
 				model.VocabularyData{
 					ActiveWordsCount: 80,
 					TotalWordsCount:  120,
+				},
+				model.ActBlockData{
+					Prot: model.ActivityData{
+						ActivityPercent:   75.0,
+						InitiativePercent: 85.0,
+						FrequencyPercent:  70.0,
+					},
+					Gol: model.ActivityData{
+						ActivityPercent:   5.0,
+						InitiativePercent: 20.0,
+						FrequencyPercent:  60.0,
+					},
+					Fra: model.ActivityData{
+						ActivityPercent:   3.0,
+						InitiativePercent: 8.0,
+						FrequencyPercent:  12.0,
+					},
 				},
 			),
 		}
@@ -168,6 +247,27 @@ func TestDiffCalculator_CalculateGroupAverage(t *testing.T) {
 		// (150+180+120)/3 = 150
 		assert.Equal(t, 150, avg.Vocabulary.TotalWordsCount)
 		assert.Nil(t, avg.Vocabulary.AdditionalWords)
+
+		// Prot Activity: (90 + 68 + 75) / 3 = 77.67
+		assert.InDelta(t, 77.67, avg.ActBlock.Prot.ActivityPercent, 0.01)
+		// Prot Initiative: (80 + 80 + 85) / 3 = 81.67
+		assert.InDelta(t, 81.67, avg.ActBlock.Prot.InitiativePercent, 0.01)
+		// Prot Frequency: (90 + 50 + 70) / 3 = 70.0
+		assert.InDelta(t, 70.0, avg.ActBlock.Prot.FrequencyPercent, 0.01)
+
+		// Gol Activity: (7 + 0 + 5) / 3 = 4.0
+		assert.InDelta(t, 4.0, avg.ActBlock.Gol.ActivityPercent, 0.01)
+		// Gol Initiative: (33 + 0 + 20) / 3 = 17.67
+		assert.InDelta(t, 17.67, avg.ActBlock.Gol.InitiativePercent, 0.01)
+		// Gol Frequency: (90 + 0 + 60) / 3 = 50.0
+		assert.InDelta(t, 50.0, avg.ActBlock.Gol.FrequencyPercent, 0.01)
+
+		// Fra Activity: (0 + 0 + 3) / 3 = 1.0
+		assert.InDelta(t, 1.0, avg.ActBlock.Fra.ActivityPercent, 0.01)
+		// Fra Initiative: (0 + 0 + 8) / 3 = 2.67
+		assert.InDelta(t, 2.67, avg.ActBlock.Fra.InitiativePercent, 0.01)
+		// Fra Frequency: (0 + 0 + 12) / 3 = 4.0
+		assert.InDelta(t, 4.0, avg.ActBlock.Fra.FrequencyPercent, 0.01)
 	})
 
 	t.Run("three students on December 15th", func(t *testing.T) {
@@ -192,6 +292,23 @@ func TestDiffCalculator_CalculateGroupAverage(t *testing.T) {
 					ActiveWordsCount: 110,
 					TotalWordsCount:  160,
 				},
+				model.ActBlockData{
+					Prot: model.ActivityData{
+						ActivityPercent:   68.0,
+						InitiativePercent: 80.0,
+						FrequencyPercent:  50.0,
+					},
+					Gol: model.ActivityData{
+						ActivityPercent:   0.0,
+						InitiativePercent: 0.0,
+						FrequencyPercent:  0.0,
+					},
+					Fra: model.ActivityData{
+						ActivityPercent:   0.0,
+						InitiativePercent: 0.0,
+						FrequencyPercent:  0.0,
+					},
+				},
 			),
 			// Student B
 			createDoc(
@@ -213,6 +330,23 @@ func TestDiffCalculator_CalculateGroupAverage(t *testing.T) {
 					ActiveWordsCount: 130,
 					TotalWordsCount:  190,
 				},
+				model.ActBlockData{
+					Prot: model.ActivityData{
+						ActivityPercent:   75.0,
+						InitiativePercent: 85.0,
+						FrequencyPercent:  65.0,
+					},
+					Gol: model.ActivityData{
+						ActivityPercent:   10.0,
+						InitiativePercent: 40.0,
+						FrequencyPercent:  75.0,
+					},
+					Fra: model.ActivityData{
+						ActivityPercent:   5.0,
+						InitiativePercent: 15.0,
+						FrequencyPercent:  20.0,
+					},
+				},
 			),
 			// Student C
 			createDoc(
@@ -233,6 +367,23 @@ func TestDiffCalculator_CalculateGroupAverage(t *testing.T) {
 				model.VocabularyData{
 					ActiveWordsCount: 90,
 					TotalWordsCount:  130,
+				},
+				model.ActBlockData{
+					Prot: model.ActivityData{
+						ActivityPercent:   60.0,
+						InitiativePercent: 75.0,
+						FrequencyPercent:  45.0,
+					},
+					Gol: model.ActivityData{
+						ActivityPercent:   3.0,
+						InitiativePercent: 25.0,
+						FrequencyPercent:  50.0,
+					},
+					Fra: model.ActivityData{
+						ActivityPercent:   0.0,
+						InitiativePercent: 0.0,
+						FrequencyPercent:  0.0,
+					},
 				},
 			),
 		}
@@ -271,6 +422,27 @@ func TestDiffCalculator_CalculateGroupAverage(t *testing.T) {
 		// (160+190+130)/3 = 160
 		assert.Equal(t, 160, avg.Vocabulary.TotalWordsCount)
 		assert.Nil(t, avg.Vocabulary.AdditionalWords)
+
+		// Prot Activity: (68 + 75 + 60) / 3 = 67.67
+		assert.InDelta(t, 67.67, avg.ActBlock.Prot.ActivityPercent, 0.01)
+		// Prot Initiative: (80 + 85 + 75) / 3 = 80.0
+		assert.InDelta(t, 80.0, avg.ActBlock.Prot.InitiativePercent, 0.01)
+		// Prot Frequency: (50 + 65 + 45) / 3 = 53.33
+		assert.InDelta(t, 53.33, avg.ActBlock.Prot.FrequencyPercent, 0.01)
+
+		// Gol Activity: (0 + 10 + 3) / 3 = 4.33
+		assert.InDelta(t, 4.33, avg.ActBlock.Gol.ActivityPercent, 0.01)
+		// Gol Initiative: (0 + 40 + 25) / 3 = 21.67
+		assert.InDelta(t, 21.67, avg.ActBlock.Gol.InitiativePercent, 0.01)
+		// Gol Frequency: (0 + 75 + 50) / 3 = 41.67
+		assert.InDelta(t, 41.67, avg.ActBlock.Gol.FrequencyPercent, 0.01)
+
+		// Fra Activity: (0 + 5 + 0) / 3 = 1.67
+		assert.InDelta(t, 1.67, avg.ActBlock.Fra.ActivityPercent, 0.01)
+		// Fra Initiative: (0 + 15 + 0) / 3 = 5.0
+		assert.InDelta(t, 5.0, avg.ActBlock.Fra.InitiativePercent, 0.01)
+		// Fra Frequency: (0 + 20 + 0) / 3 = 6.67
+		assert.InDelta(t, 6.67, avg.ActBlock.Fra.FrequencyPercent, 0.01)
 	})
 
 	t.Run("documents with different dates returns error", func(t *testing.T) {
@@ -281,6 +453,23 @@ func TestDiffCalculator_CalculateGroupAverage(t *testing.T) {
 				model.LanguageDevelopment{},
 				model.CommunicativeFunctions{},
 				model.VocabularyData{},
+				model.ActBlockData{
+					Prot: model.ActivityData{
+						ActivityPercent:   90.0,
+						InitiativePercent: 80.0,
+						FrequencyPercent:  90.0,
+					},
+					Gol: model.ActivityData{
+						ActivityPercent:   7.0,
+						InitiativePercent: 33.0,
+						FrequencyPercent:  90.0,
+					},
+					Fra: model.ActivityData{
+						ActivityPercent:   0.0,
+						InitiativePercent: 0.0,
+						FrequencyPercent:  0.0,
+					},
+				},
 			),
 			createDoc(
 				"B",
@@ -288,6 +477,23 @@ func TestDiffCalculator_CalculateGroupAverage(t *testing.T) {
 				model.LanguageDevelopment{},
 				model.CommunicativeFunctions{},
 				model.VocabularyData{},
+				model.ActBlockData{
+					Prot: model.ActivityData{
+						ActivityPercent:   68.0,
+						InitiativePercent: 80.0,
+						FrequencyPercent:  50.0,
+					},
+					Gol: model.ActivityData{
+						ActivityPercent:   0.0,
+						InitiativePercent: 0.0,
+						FrequencyPercent:  0.0,
+					},
+					Fra: model.ActivityData{
+						ActivityPercent:   0.0,
+						InitiativePercent: 0.0,
+						FrequencyPercent:  0.0,
+					},
+				},
 			),
 		}
 
@@ -309,6 +515,23 @@ func TestDiffCalculator_CalculateGroupProgress(t *testing.T) {
 			Holophrase:     model.LanguageActivity{Activity: 40.0, Initiative: 35.0},
 			Phrase:         model.LanguageActivity{Activity: 60.0, Initiative: 55.0},
 		},
+		ActBlock: model.ActBlockData{
+			Prot: model.ActivityData{
+				ActivityPercent:   90.0,
+				InitiativePercent: 80.0,
+				FrequencyPercent:  90.0,
+			},
+			Gol: model.ActivityData{
+				ActivityPercent:   7.0,
+				InitiativePercent: 33.0,
+				FrequencyPercent:  90.0,
+			},
+			Fra: model.ActivityData{
+				ActivityPercent:   0.0,
+				InitiativePercent: 0.0,
+				FrequencyPercent:  0.0,
+			},
+		},
 	}
 
 	laterAvg := GroupAverage{
@@ -318,6 +541,23 @@ func TestDiffCalculator_CalculateGroupProgress(t *testing.T) {
 			Protolanguage:  model.LanguageActivity{Activity: 35.0, Initiative: 25.0},
 			Holophrase:     model.LanguageActivity{Activity: 45.0, Initiative: 40.0},
 			Phrase:         model.LanguageActivity{Activity: 65.0, Initiative: 60.0},
+		},
+		ActBlock: model.ActBlockData{
+			Prot: model.ActivityData{
+				ActivityPercent:   68.0,
+				InitiativePercent: 80.0,
+				FrequencyPercent:  50.0,
+			},
+			Gol: model.ActivityData{
+				ActivityPercent:   0.0,
+				InitiativePercent: 0.0,
+				FrequencyPercent:  0.0,
+			},
+			Fra: model.ActivityData{
+				ActivityPercent:   0.0,
+				InitiativePercent: 0.0,
+				FrequencyPercent:  0.0,
+			},
 		},
 	}
 
@@ -336,6 +576,25 @@ func TestDiffCalculator_CalculateGroupProgress(t *testing.T) {
 		assert.InDelta(t, 12.5, progress.LanguageLevels.Holophrase.ActivityPercent, 0.01)
 		// Phrase: ((65-60)/60)*100 = 8.33%
 		assert.InDelta(t, 8.33, progress.LanguageLevels.Phrase.ActivityPercent, 0.01)
+
+		// Prot Activity: 68.0 - 90.0 = -22.0
+		assert.InDelta(t, -22.0, progress.ActBlockDiff.Prot.ActivityDelta, 0.01)
+		// Prot Initiative: 80.0 - 80.0 = 0.0
+		assert.InDelta(t, 0.0, progress.ActBlockDiff.Prot.InitiativeDelta, 0.01)
+		// Prot Frequency: 50.0 - 90.0 = -40.0
+		assert.InDelta(t, -40.0, progress.ActBlockDiff.Prot.FrequencyDelta, 0.01)
+
+		// Gol Activity: 0.0 - 7.0 = -7.0
+		assert.InDelta(t, -7.0, progress.ActBlockDiff.Gol.ActivityDelta, 0.01)
+		// Gol Initiative: 0.0 - 33.0 = -33.0
+		assert.InDelta(t, -33.0, progress.ActBlockDiff.Gol.InitiativeDelta, 0.01)
+		// Gol Frequency: 0.0 - 90.0 = -90.0
+		assert.InDelta(t, -90.0, progress.ActBlockDiff.Gol.FrequencyDelta, 0.01)
+
+		// Fra Activity: 0.0 - 0.0 = 0.0
+		assert.InDelta(t, 0.0, progress.ActBlockDiff.Fra.ActivityDelta, 0.01)
+		assert.InDelta(t, 0.0, progress.ActBlockDiff.Fra.InitiativeDelta, 0.01)
+		assert.InDelta(t, 0.0, progress.ActBlockDiff.Fra.FrequencyDelta, 0.01)
 	})
 
 	t.Run("calculate negative progress", func(t *testing.T) {
@@ -347,6 +606,23 @@ func TestDiffCalculator_CalculateGroupProgress(t *testing.T) {
 				Protolanguage:  model.LanguageActivity{Activity: 25.0},
 				Holophrase:     model.LanguageActivity{Activity: 35.0},
 				Phrase:         model.LanguageActivity{Activity: 55.0},
+			},
+			ActBlock: model.ActBlockData{
+				Prot: model.ActivityData{
+					ActivityPercent:   60.0,
+					InitiativePercent: 75.0,
+					FrequencyPercent:  40.0,
+				},
+				Gol: model.ActivityData{
+					ActivityPercent:   0.0,
+					InitiativePercent: 0.0,
+					FrequencyPercent:  0.0,
+				},
+				Fra: model.ActivityData{
+					ActivityPercent:   0.0,
+					InitiativePercent: 0.0,
+					FrequencyPercent:  0.0,
+				},
 			},
 		}
 
@@ -362,6 +638,13 @@ func TestDiffCalculator_CalculateGroupProgress(t *testing.T) {
 		assert.InDelta(t, -12.5, progress.LanguageLevels.Holophrase.ActivityPercent, 0.01)
 		// Phrase: ((55-60)/60)*100 = -8.33%
 		assert.InDelta(t, -8.33, progress.LanguageLevels.Phrase.ActivityPercent, 0.01)
+
+		// Prot Activity: 60.0 - 90.0 = -30.0
+		assert.InDelta(t, -30.0, progress.ActBlockDiff.Prot.ActivityDelta, 0.01)
+		// Prot Initiative: 75.0 - 80.0 = -5.0
+		assert.InDelta(t, -5.0, progress.ActBlockDiff.Prot.InitiativeDelta, 0.01)
+		// Prot Frequency: 40.0 - 90.0 = -50.0
+		assert.InDelta(t, -50.0, progress.ActBlockDiff.Prot.FrequencyDelta, 0.01)
 	})
 
 	t.Run("error on empty dates", func(t *testing.T) {
