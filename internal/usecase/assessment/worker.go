@@ -102,6 +102,8 @@ func (w *Worker) handle(ctx context.Context, pairs []model.StudentPair) {
 	// Рассчитываем прогресс группы между датами
 	groupProgress := w.calculateGroupProgress(groupAverages)
 
+	groupDiff := w.calculateGroupVocabularyProgress(pairs)
+
 	_ = w.storage.Set(ctx, requestID, &ProcessingResult{
 		Status:            "completed",
 		ProgressPercent:   100,
@@ -110,6 +112,7 @@ func (w *Worker) handle(ctx context.Context, pairs []model.StudentPair) {
 		Results:           results,
 		GroupAverages:     groupAverages,
 		GroupProgress:     groupProgress,
+		GroupDiff:         groupDiff,
 	}, w.ttl)
 }
 
@@ -176,4 +179,41 @@ func (w *Worker) calculateGroupProgress(averages []GroupAverage) []GroupProgress
 	}
 
 	return progressList
+}
+
+// calculateGroupVocabularyProgress рассчитывает разницу по словарю для группы
+func (w *Worker) calculateGroupVocabularyProgress(pairs []model.StudentPair) []GroupVocabularyProgress {
+	if len(pairs) == 0 {
+		return nil
+	}
+
+	// Собираем документы "до" и "после" из пар
+	var beforeDocs []*model.AssessmentDocument
+	var afterDocs []*model.AssessmentDocument
+
+	for _, pair := range pairs {
+		if pair.Before != nil {
+			beforeDocs = append(beforeDocs, pair.Before)
+		}
+		if pair.After != nil {
+			afterDocs = append(afterDocs, pair.After)
+		}
+	}
+
+	// Проверяем, что есть данные для сравнения
+	if len(beforeDocs) == 0 || len(afterDocs) == 0 {
+		w.log.Warn("insufficient data for vocabulary progress calculation",
+			"before_docs", len(beforeDocs),
+			"after_docs", len(afterDocs))
+		return nil
+	}
+
+	calc := &DiffCalculator{}
+	vocabProgress, err := calc.CalculateGroupVocabularyProgress(beforeDocs, afterDocs)
+	if err != nil {
+		w.log.Error("failed to calculate group vocabulary progress", "error", err)
+		return nil
+	}
+
+	return []GroupVocabularyProgress{vocabProgress}
 }

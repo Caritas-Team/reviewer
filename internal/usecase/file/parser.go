@@ -60,6 +60,8 @@ func (p *DocumentParser) Parse(r io.Reader, filename string) (*model.AssessmentD
 	if err := p.parseVocabulary(&fullRawData, &doc.Vocabulary); err != nil {
 		return nil, fmt.Errorf("не удалось разобрать словарный запас: %w", err)
 	}
+	// Парсим actBlock01 данные
+	p.parseActBlockData(&fullRawData, doc)
 
 	return doc, nil
 }
@@ -78,6 +80,18 @@ type DiagramBlock struct {
 	FraInitProcNumElem  string `json:"fraInitProcNumElem"`
 }
 
+type ActBlock01 struct {
+	ProtSforProcElem  string `json:"protSforProcElem"`
+	ProtInitProcElem  string `json:"protInitProcElem"`
+	ProtChastProcElem string `json:"protChastProcElem"`
+	GolSforProcElem   string `json:"golSforProcElem"`
+	GolInitProcElem   string `json:"golInitProcElem"`
+	GolChastProcElem  string `json:"golChastProcElem"`
+	FraSforProcElem   string `json:"fraSforProcElem"`
+	FraInitProcElem   string `json:"fraInitProcElem"`
+	FraChastProcElem  string `json:"fraChastProcElem"`
+}
+
 type FullRawJSON struct {
 	Por01    string      `json:"por01"` // Дата в формате <div>2025-11-11</div>
 	Por02    string      `json:"por02"` // Student ID в формате <div>123</div>
@@ -90,6 +104,10 @@ type FullRawJSON struct {
 
 	BasicDictionary []BasicDictionaryItem `json:"basicDictionary"`
 	DictBasicMore   []string              `json:"dictBasicMore"`
+	DictSposObsh    []string              `json:"dictSposObsh"`
+	DictWerbSlov    []string              `json:"dictWerbSlov"`
+
+	ActBlock01 ActBlock01 `json:"actBlock01"`
 }
 
 type BasicDictionaryItem struct {
@@ -199,9 +217,29 @@ func (p *DocumentParser) parseVocabulary(raw *FullRawJSON, vocab *model.Vocabula
 		}
 	}
 
+	// Получаем способы общения dictSposObsh
+	communicationWays := make([]string, 0)
+	for _, way := range raw.DictSposObsh {
+		trimmedWay := strings.TrimSpace(way)
+		if trimmedWay != "" {
+			communicationWays = append(communicationWays, trimmedWay)
+		}
+	}
+
+	// Считаем количество вербальных слов
+	verbalWordsCount := 0
+	for _, word := range raw.DictWerbSlov {
+		trimmedWord := strings.TrimSpace(word)
+		if trimmedWord != "" {
+			verbalWordsCount++
+		}
+	}
+
 	vocab.ActiveWordsCount = activeWordsCount
 	vocab.AdditionalWords = additionalWords
-	vocab.TotalWordsCount = activeWordsCount + len(additionalWords)
+	vocab.TotalWordsCount = activeWordsCount + len(additionalWords) + verbalWordsCount
+	vocab.CommunicationWays = communicationWays
+	vocab.VerbalWordsCount = verbalWordsCount
 
 	return nil
 }
@@ -217,4 +255,40 @@ func extractFromDivTag(divContent string) string {
 	content = strings.TrimSpace(content)
 
 	return content
+}
+
+// parseActBlockData парсит данные из actBlock01 полей
+func (p *DocumentParser) parseActBlockData(raw *FullRawJSON, doc *model.AssessmentDocument) {
+	// Функция для парсинга ProcNumElem в float64
+	parsePercentStr := func(el string) float64 {
+		if el == "" {
+			return 0
+		}
+
+		s := strings.TrimSpace(el)
+		s = strings.TrimSuffix(s, "%")
+		if s == "" {
+			return 0
+		}
+
+		val, err := strconv.ParseFloat(s, 64)
+		if err != nil {
+			return 0
+		}
+
+		return val
+	}
+
+	// Парсим все поля
+	doc.ActBlock.Prot.ActivityPercent = parsePercentStr(raw.ActBlock01.ProtSforProcElem)
+	doc.ActBlock.Prot.InitiativePercent = parsePercentStr(raw.ActBlock01.ProtInitProcElem)
+	doc.ActBlock.Prot.FrequencyPercent = parsePercentStr(raw.ActBlock01.ProtChastProcElem)
+
+	doc.ActBlock.Gol.ActivityPercent = parsePercentStr(raw.ActBlock01.GolSforProcElem)
+	doc.ActBlock.Gol.InitiativePercent = parsePercentStr(raw.ActBlock01.GolInitProcElem)
+	doc.ActBlock.Gol.FrequencyPercent = parsePercentStr(raw.ActBlock01.GolChastProcElem)
+
+	doc.ActBlock.Fra.ActivityPercent = parsePercentStr(raw.ActBlock01.FraSforProcElem)
+	doc.ActBlock.Fra.InitiativePercent = parsePercentStr(raw.ActBlock01.FraInitProcElem)
+	doc.ActBlock.Fra.FrequencyPercent = parsePercentStr(raw.ActBlock01.FraChastProcElem)
 }
