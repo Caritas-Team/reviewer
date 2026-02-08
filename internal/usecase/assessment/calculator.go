@@ -38,8 +38,13 @@ type CommFuncsDiff struct {
 
 // VocabularyDiff различия в словаре
 type VocabularyDiff struct {
-	ActiveWordsDelta int `json:"active_words_delta"`
-	TotalWordsDelta  int `json:"total_words_delta"`
+	ActiveWordsDelta     int      `json:"active_words_delta"`
+	TotalWordsDelta      int      `json:"total_words_delta"`
+	VerbalWordsDelta     int      `json:"verbal_words_delta"`
+	AdditionalWordsDelta int      `json:"additional_words_delta"`
+	VerbalWordsCount     int      `json:"verbal_words_count"`
+	AdditionalWordsCount int      `json:"additional_words_count"`
+	CommunicationWays    []string `json:"communication_ways,omitempty"`
 }
 
 // GeneralProgress общий прогресс
@@ -63,6 +68,17 @@ type GroupProgress struct {
 	PeriodEnd      string              `json:"period_end"`               // Конечная дата
 	LanguageLevels GroupLanguageLevels `json:"language_levels"`          // Прогресс по уровням
 	ActBlockDiff   GroupActBlockDiff   `json:"act_block_diff,omitempty"` // Прогресс функции контроля
+}
+
+// GroupVocabularyProgress - прогресс группы по словарному запасу
+type GroupVocabularyProgress struct {
+	NewWordsCount           int      `json:"new_words_count"`
+	NewWordsDiff            int      `json:"new_words_diff"`
+	VerbalWordsCount        int      `json:"verbal_words_count"`
+	VerbalWordsDiff         int      `json:"verbal_words_diff"`
+	AdditionalWordsCount    int      `json:"additional_words_count"`
+	NonDictionaryWordsDiff  int      `json:"non_dictionary_words_diff"`
+	CommonCommunicationWays []string `json:"common_communication_ways,omitempty"`
 }
 
 // GroupActBlockDiff - разница в ActBlock данных между двумя группами
@@ -143,8 +159,13 @@ func (dc *DiffCalculator) compareCommunicativeFunctions(before, after model.Comm
 // compareVocabulary сравнивает словарный запас
 func (dc *DiffCalculator) compareVocabulary(before, after model.VocabularyData) VocabularyDiff {
 	return VocabularyDiff{
-		ActiveWordsDelta: after.ActiveWordsCount - before.ActiveWordsCount,
-		TotalWordsDelta:  after.TotalWordsCount - before.TotalWordsCount,
+		ActiveWordsDelta:     after.ActiveWordsCount - before.ActiveWordsCount,
+		TotalWordsDelta:      after.TotalWordsCount - before.TotalWordsCount,
+		VerbalWordsDelta:     after.VerbalWordsCount - before.VerbalWordsCount,
+		AdditionalWordsDelta: len(after.AdditionalWords) - len(before.AdditionalWords),
+		VerbalWordsCount:     after.VerbalWordsCount,
+		AdditionalWordsCount: len(after.AdditionalWords),
+		CommunicationWays:    after.CommunicationWays,
 	}
 }
 
@@ -385,4 +406,94 @@ func (dc *DiffCalculator) calculateGroupActBlockAverage(documents []*model.Asses
 			FrequencyPercent:  fraFrequencySum / count,
 		},
 	}
+}
+
+// CalculateGroupVocabularyProgress рассчитывает прогресс по словарю для группы
+func (dc *DiffCalculator) CalculateGroupVocabularyProgress(earlierDocs, laterDocs []*model.AssessmentDocument) (GroupVocabularyProgress, error) {
+	if len(earlierDocs) == 0 || len(laterDocs) == 0 {
+		return GroupVocabularyProgress{}, fmt.Errorf("оба набора документов обязательны")
+	}
+
+	var (
+		beforeTotalSum      int
+		beforeActiveSum     int
+		beforeVerbalSum     int
+		beforeAdditionalSum int
+	)
+
+	var (
+		afterTotalSum      int
+		afterActiveSum     int
+		afterVerbalSum     int
+		afterAdditionalSum int
+	)
+
+	var allLaterCommunicationWays [][]string
+
+	for _, doc := range earlierDocs {
+		beforeTotalSum += doc.Vocabulary.TotalWordsCount
+		beforeActiveSum += doc.Vocabulary.ActiveWordsCount
+		beforeVerbalSum += doc.Vocabulary.VerbalWordsCount
+		beforeAdditionalSum += len(doc.Vocabulary.AdditionalWords)
+	}
+
+	for _, doc := range laterDocs {
+		afterTotalSum += doc.Vocabulary.TotalWordsCount
+		afterActiveSum += doc.Vocabulary.ActiveWordsCount
+		afterVerbalSum += doc.Vocabulary.VerbalWordsCount
+		afterAdditionalSum += len(doc.Vocabulary.AdditionalWords)
+		allLaterCommunicationWays = append(allLaterCommunicationWays, doc.Vocabulary.CommunicationWays)
+	}
+
+	newWordsAfter := afterActiveSum + afterVerbalSum + afterAdditionalSum
+
+	newWordsBefore := beforeActiveSum + beforeVerbalSum + beforeAdditionalSum
+	newWordsDiff := newWordsAfter - newWordsBefore
+
+	verbalWordsCount := afterVerbalSum + beforeVerbalSum
+
+	verbalWordsDiff := afterVerbalSum - beforeVerbalSum
+
+	additionalWordsCount := afterAdditionalSum + beforeAdditionalSum
+
+	additionalWordsDiff := afterAdditionalSum - beforeAdditionalSum
+
+	allCommunicationWays := dc.findCommonCommunicationWays(allLaterCommunicationWays)
+
+	return GroupVocabularyProgress{
+		NewWordsCount:           newWordsAfter,
+		NewWordsDiff:            newWordsDiff,         // Разница новых слов
+		VerbalWordsCount:        verbalWordsCount,     // Вербальные слова (последняя дата)
+		VerbalWordsDiff:         verbalWordsDiff,      // Разница вербальных слов
+		AdditionalWordsCount:    additionalWordsCount, // Слова не из словаря (последняя дата)
+		NonDictionaryWordsDiff:  additionalWordsDiff,  // Разница слов не из словаря
+		CommonCommunicationWays: allCommunicationWays, // Все уникальные способы общения
+	}, nil
+}
+
+// findCommonCommunicationWays находит общие способы общения для всех студентов
+func (dc *DiffCalculator) findCommonCommunicationWays(allWays [][]string) []string {
+	if len(allWays) == 0 {
+		return nil
+	}
+
+	common := make([]string, len(allWays[0]))
+	copy(common, allWays[0])
+
+	uniqueWays := make(map[string]bool)
+
+	for _, studentWays := range allWays {
+		for _, way := range studentWays {
+			if way != "" {
+				uniqueWays[way] = true
+			}
+		}
+	}
+
+	result := make([]string, 0, len(uniqueWays))
+	for way := range uniqueWays {
+		result = append(result, way)
+	}
+
+	return result
 }

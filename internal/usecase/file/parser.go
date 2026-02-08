@@ -81,15 +81,15 @@ type DiagramBlock struct {
 }
 
 type ActBlock01 struct {
-	ProtSforProcElem  ProcNumElem `json:"protSforProcElem"`
-	ProtInitProcElem  ProcNumElem `json:"protInitProcElem"`
-	ProtChastProcElem ProcNumElem `json:"protChastProcElem"`
-	GolSforProcElem   ProcNumElem `json:"golSforProcElem"`
-	GolInitProcElem   ProcNumElem `json:"golInitProcElem"`
-	GolChastProcElem  ProcNumElem `json:"golChastProcElem"`
-	FraSforProcElem   ProcNumElem `json:"fraSforProcElem"`
-	FraInitProcElem   ProcNumElem `json:"fraInitProcElem"`
-	FraChastProcElem  ProcNumElem `json:"fraChastProcElem"`
+	ProtSforProcElem  string `json:"protSforProcElem"`
+	ProtInitProcElem  string `json:"protInitProcElem"`
+	ProtChastProcElem string `json:"protChastProcElem"`
+	GolSforProcElem   string `json:"golSforProcElem"`
+	GolInitProcElem   string `json:"golInitProcElem"`
+	GolChastProcElem  string `json:"golChastProcElem"`
+	FraSforProcElem   string `json:"fraSforProcElem"`
+	FraInitProcElem   string `json:"fraInitProcElem"`
+	FraChastProcElem  string `json:"fraChastProcElem"`
 }
 
 type FullRawJSON struct {
@@ -104,6 +104,8 @@ type FullRawJSON struct {
 
 	BasicDictionary []BasicDictionaryItem `json:"basicDictionary"`
 	DictBasicMore   []string              `json:"dictBasicMore"`
+	DictSposObsh    []string              `json:"dictSposObsh"`
+	DictWerbSlov    []string              `json:"dictWerbSlov"`
 
 	ActBlock01 ActBlock01 `json:"actBlock01"`
 }
@@ -215,9 +217,29 @@ func (p *DocumentParser) parseVocabulary(raw *FullRawJSON, vocab *model.Vocabula
 		}
 	}
 
+	// Получаем способы общения dictSposObsh
+	communicationWays := make([]string, 0)
+	for _, way := range raw.DictSposObsh {
+		trimmedWay := strings.TrimSpace(way)
+		if trimmedWay != "" {
+			communicationWays = append(communicationWays, trimmedWay)
+		}
+	}
+
+	// Считаем количество вербальных слов
+	verbalWordsCount := 0
+	for _, word := range raw.DictWerbSlov {
+		trimmedWord := strings.TrimSpace(word)
+		if trimmedWord != "" {
+			verbalWordsCount++
+		}
+	}
+
 	vocab.ActiveWordsCount = activeWordsCount
 	vocab.AdditionalWords = additionalWords
-	vocab.TotalWordsCount = activeWordsCount + len(additionalWords)
+	vocab.TotalWordsCount = activeWordsCount + len(additionalWords) + verbalWordsCount
+	vocab.CommunicationWays = communicationWays
+	vocab.VerbalWordsCount = verbalWordsCount
 
 	return nil
 }
@@ -238,12 +260,12 @@ func extractFromDivTag(divContent string) string {
 // parseActBlockData парсит данные из actBlock01 полей
 func (p *DocumentParser) parseActBlockData(raw *FullRawJSON, doc *model.AssessmentDocument) {
 	// Функция для парсинга ProcNumElem в float64
-	parseProcNumElem := func(elem ProcNumElem) float64 {
-		if elem.ProcNumElem == "" {
+	parsePercentStr := func(el string) float64 {
+		if el == "" {
 			return 0
 		}
 
-		s := strings.TrimSpace(elem.ProcNumElem)
+		s := strings.TrimSpace(el)
 		s = strings.TrimSuffix(s, "%")
 		if s == "" {
 			return 0
@@ -258,15 +280,15 @@ func (p *DocumentParser) parseActBlockData(raw *FullRawJSON, doc *model.Assessme
 	}
 
 	// Парсим все поля
-	doc.ActBlock.Prot.ActivityPercent = parseProcNumElem(raw.ActBlock01.ProtSforProcElem)
-	doc.ActBlock.Prot.InitiativePercent = parseProcNumElem(raw.ActBlock01.ProtInitProcElem)
-	doc.ActBlock.Prot.FrequencyPercent = parseProcNumElem(raw.ActBlock01.ProtChastProcElem)
+	doc.ActBlock.Prot.ActivityPercent = parsePercentStr(raw.ActBlock01.ProtSforProcElem)
+	doc.ActBlock.Prot.InitiativePercent = parsePercentStr(raw.ActBlock01.ProtInitProcElem)
+	doc.ActBlock.Prot.FrequencyPercent = parsePercentStr(raw.ActBlock01.ProtChastProcElem)
 
-	doc.ActBlock.Gol.ActivityPercent = parseProcNumElem(raw.ActBlock01.GolSforProcElem)
-	doc.ActBlock.Gol.InitiativePercent = parseProcNumElem(raw.ActBlock01.GolInitProcElem)
-	doc.ActBlock.Gol.FrequencyPercent = parseProcNumElem(raw.ActBlock01.GolChastProcElem)
+	doc.ActBlock.Gol.ActivityPercent = parsePercentStr(raw.ActBlock01.GolSforProcElem)
+	doc.ActBlock.Gol.InitiativePercent = parsePercentStr(raw.ActBlock01.GolInitProcElem)
+	doc.ActBlock.Gol.FrequencyPercent = parsePercentStr(raw.ActBlock01.GolChastProcElem)
 
-	doc.ActBlock.Fra.ActivityPercent = parseProcNumElem(raw.ActBlock01.FraSforProcElem)
-	doc.ActBlock.Fra.InitiativePercent = parseProcNumElem(raw.ActBlock01.FraInitProcElem)
-	doc.ActBlock.Fra.FrequencyPercent = parseProcNumElem(raw.ActBlock01.FraChastProcElem)
+	doc.ActBlock.Fra.ActivityPercent = parsePercentStr(raw.ActBlock01.FraSforProcElem)
+	doc.ActBlock.Fra.InitiativePercent = parsePercentStr(raw.ActBlock01.FraInitProcElem)
+	doc.ActBlock.Fra.FrequencyPercent = parsePercentStr(raw.ActBlock01.FraChastProcElem)
 }

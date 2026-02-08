@@ -48,9 +48,11 @@ type CommunicativeFunctions struct {
 
 // VocabularyData словарный запас
 type VocabularyData struct {
-	ActiveWordsCount int      `json:"active_words_count"`
-	AdditionalWords  []string `json:"additional_words"`
-	TotalWordsCount  int      `json:"total_words_count"`
+	ActiveWordsCount  int      `json:"active_words_count"`
+	AdditionalWords   []string `json:"additional_words"`
+	TotalWordsCount   int      `json:"total_words_count"`
+	CommunicationWays []string `json:"communication_ways,omitempty"`
+	VerbalWordsCount  int      `json:"verbal_words_count,omitempty"`
 }
 
 // StudentPair пара документов для одного студента (до/после)
