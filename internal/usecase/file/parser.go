@@ -15,9 +15,13 @@ type DocumentParser struct{}
 
 // Parse парсит JSON и создает структурированный AssessmentDocument
 func (p *DocumentParser) Parse(r io.Reader, filename string) (*model.AssessmentDocument, error) {
+	data, err := io.ReadAll(r)
+	if err != nil {
+		return nil, fmt.Errorf("не удалось прочитать данные: %w", err)
+	}
 
 	var fullRawData FullRawJSON
-	if err := json.NewDecoder(r).Decode(&fullRawData); err != nil {
+	if err := json.Unmarshal(data, &fullRawData); err != nil {
 		return nil, fmt.Errorf("не удалось разобрать структуру JSON: %w", err)
 	}
 
@@ -36,6 +40,10 @@ func (p *DocumentParser) Parse(r io.Reader, filename string) (*model.AssessmentD
 		return nil, fmt.Errorf("неверный формат даты в por01: %w", err)
 	}
 
+	diagnosis := extractFromDivTag(fullRawData.Por04)
+	livingSituation := extractFromDivTag(fullRawData.Por05)
+	familyDescription := extractFromDivTag(fullRawData.Por06)
+
 	// Создаем структурированный документ
 	doc := &model.AssessmentDocument{
 		Metadata: model.AssessmentMetadata{
@@ -44,6 +52,9 @@ func (p *DocumentParser) Parse(r io.Reader, filename string) (*model.AssessmentD
 			AssessmentType: "unknown", // Будет установлено позже
 			FileName:       filename,
 		},
+		Diagnosis:         diagnosis,
+		LivingSituation:   livingSituation,
+		FamilyDescription: familyDescription,
 	}
 
 	// Парсим уровни языкового развития
@@ -63,6 +74,59 @@ func (p *DocumentParser) Parse(r io.Reader, filename string) (*model.AssessmentD
 	// Парсим actBlock01 данные
 	p.parseActBlockData(&fullRawData, doc)
 
+	otherBlocks := []struct {
+		block ActBlockOther
+		id    string
+	}{
+		{fullRawData.ActBlock02, "actBlock02"},
+		{fullRawData.ActBlock03, "actBlock03"},
+		{fullRawData.ActBlock04, "actBlock04"},
+		{fullRawData.ActBlock05, "actBlock05"},
+		{fullRawData.ActBlock08, "actBlock08"},
+		{fullRawData.ActBlock09, "actBlock09"},
+		{fullRawData.ActBlock10, "actBlock10"},
+		{fullRawData.ActBlock11, "actBlock11"},
+		{fullRawData.ActBlock14, "actBlock14"},
+		{fullRawData.ActBlock15, "actBlock15"},
+		{fullRawData.ActBlock16, "actBlock16"},
+		{fullRawData.ActBlock18, "actBlock18"},
+	}
+
+	for _, b := range otherBlocks {
+		filtered := filterActBlockOther(b.block, b.id)
+		doc.OtherActBlocks = append(doc.OtherActBlocks, filtered)
+	}
+
+	doc.FastMessages = fullRawData.DictBystrSoobsh
+
+	var rawMap map[string]json.RawMessage
+	if err := json.Unmarshal(data, &rawMap); err != nil {
+		return nil, fmt.Errorf("не удалось разобрать структуру JSON: %w", err)
+	} else {
+		counts := map[string]int{
+			"first":  0,
+			"second": 0,
+			"third":  0,
+			"fourth": 0,
+		}
+		for key := range rawMap {
+			switch {
+			case strings.HasPrefix(key, "roundTargetFirst"):
+				counts["first"]++
+			case strings.HasPrefix(key, "roundTargetSecond"):
+				counts["second"]++
+			case strings.HasPrefix(key, "roundTargetThird"):
+				counts["third"]++
+			case strings.HasPrefix(key, "roundTargetFourth"):
+				counts["fourth"]++
+			}
+		}
+
+		if counts["first"] > 0 || counts["second"] > 0 || counts["third"] > 0 || counts["fourth"] > 0 {
+			doc.CommunicationCounts = counts
+		}
+	}
+
 	return doc, nil
 }
 
@@ -72,6 +136,7 @@ type ProcNumElem struct {
 
 type DiagramBlock struct {
 	PredActProcNumElem  string `json:"predActProcNumElem"`
+	PredInitProcNumElem string `json:"predInitProcNumElem"`
 	ProtActProcNumElem  string `json:"protActProcNumElem"`
 	ProtInitProcNumElem string `json:"protInitProcNumElem"`
 	GolActProcNumElem   string `json:"golActProcNumElem"`
@@ -92,9 +157,28 @@ type ActBlock01 struct {
 	FraChastProcElem  string `json:"fraChastProcElem"`
 }
 
+type ActBlockOther struct {
+	BodyBlockElem      string `json:"bodyBlockElem"`
+	UnavailableTagElem string `json:"unavailableTagElem"`
+	ProtUnElem         string `json:"protUnElem"`
+	ProtOverElem       string `json:"protOverElem"`
+	ProtSforProcElem   string `json:"protSforProcElem"`
+	ProtInitProcElem   string `json:"protInitProcElem"`
+	GolUnElem          string `json:"golUnElem"`
+	GolOverElem        string `json:"golOverElem"`
+	GolSforProcElem    string `json:"golSforProcElem"`
+	GolInitProcElem    string `json:"golInitProcElem"`
+	FraUnElem          string `json:"fraUnElem"`
+	FraSforProcElem    string `json:"fraSforProcElem"`
+	FraInitProcElem    string `json:"fraInitProcElem"`
+}
+
 type FullRawJSON struct {
 	Por01    string      `json:"por01"` // Дата в формате <div>2025-11-11</div>
 	Por02    string      `json:"por02"` // Student ID в формате <div>123</div>
+	Por04    string      `json:"por04"`
+	Por05    string      `json:"por05"`
+	Por06    string      `json:"por06"`
 	NewAct01 ProcNumElem `json:"newAct01"`
 	NewAct02 ProcNumElem `json:"newAct02"`
 	NewAct03 ProcNumElem `json:"newAct03"`
@@ -107,7 +191,21 @@ type FullRawJSON struct {
 	DictSposObsh    []string              `json:"dictSposObsh"`
 	DictWerbSlov    []string              `json:"dictWerbSlov"`
 
-	ActBlock01 ActBlock01 `json:"actBlock01"`
+	ActBlock01 ActBlock01    `json:"actBlock01"`
+	ActBlock02 ActBlockOther `json:"actBlock02,omitempty"`
+	ActBlock03 ActBlockOther `json:"actBlock03,omitempty"`
+	ActBlock04 ActBlockOther `json:"actBlock04,omitempty"`
+	ActBlock05 ActBlockOther `json:"actBlock05,omitempty"`
+	ActBlock08 ActBlockOther `json:"actBlock08,omitempty"`
+	ActBlock09 ActBlockOther `json:"actBlock09,omitempty"`
+	ActBlock10 ActBlockOther `json:"actBlock10,omitempty"`
+	ActBlock11 ActBlockOther `json:"actBlock11,omitempty"`
+	ActBlock14 ActBlockOther `json:"actBlock14,omitempty"`
+	ActBlock15 ActBlockOther `json:"actBlock15,omitempty"`
+	ActBlock16 ActBlockOther `json:"actBlock16,omitempty"`
+	ActBlock18 ActBlockOther `json:"actBlock18,omitempty"`
+
+	DictBystrSoobsh []string `json:"dictBystrSoobsh"`
 }
 
 type BasicDictionaryItem struct {
@@ -133,6 +231,10 @@ func (p *DocumentParser) parseLanguageLevels(raw *FullRawJSON, levels *model.Lan
 
 	if levels.Preintentional.Activity, err = parsePercent(raw.DiagramBlock.PredActProcNumElem); err != nil {
 		return fmt.Errorf("доинтенциональная активность: %w", err)
+	}
+
+	if levels.Preintentional.Initiative, err = parsePercent(raw.DiagramBlock.PredInitProcNumElem); err != nil {
+		return fmt.Errorf("доинтенциональная инициатива: %w", err)
 	}
 
 	if levels.Protolanguage.Activity, err = parsePercent(raw.DiagramBlock.ProtActProcNumElem); err != nil {
@@ -291,4 +393,52 @@ func (p *DocumentParser) parseActBlockData(raw *FullRawJSON, doc *model.Assessme
 	doc.ActBlock.Fra.ActivityPercent = parsePercentStr(raw.ActBlock01.FraSforProcElem)
 	doc.ActBlock.Fra.InitiativePercent = parsePercentStr(raw.ActBlock01.FraInitProcElem)
 	doc.ActBlock.Fra.FrequencyPercent = parsePercentStr(raw.ActBlock01.FraChastProcElem)
+}
+
+func filterActBlockOther(block ActBlockOther, blockID string) model.ActBlockOtherRaw {
+	filtered := model.ActBlockOtherRaw{
+		BlockID: blockID,
+	}
+
+	if block.BodyBlockElem == "hidden" {
+		filtered.BodyBlockElem = block.BodyBlockElem
+	}
+	if block.UnavailableTagElem == "shown" {
+		filtered.UnavailableTagElem = block.UnavailableTagElem
+	}
+	if block.ProtUnElem == "shown" {
+		filtered.ProtUnElem = block.ProtUnElem
+	}
+	if block.ProtOverElem == "shown" {
+		filtered.ProtOverElem = block.ProtOverElem
+	}
+	if block.ProtSforProcElem != "" {
+		filtered.ProtSforProcElem = block.ProtSforProcElem
+	}
+	if block.ProtInitProcElem != "" {
+		filtered.ProtInitProcElem = block.ProtInitProcElem
+	}
+	if block.GolUnElem == "shown" {
+		filtered.GolUnElem = block.GolUnElem
+	}
+	if block.GolOverElem == "shown" {
+		filtered.GolOverElem = block.GolOverElem
+	}
+	if block.GolSforProcElem != "" {
+		filtered.GolSforProcElem = block.GolSforProcElem
+	}
+	if block.GolInitProcElem != "" {
+		filtered.GolInitProcElem = block.GolInitProcElem
+	}
+	if block.FraUnElem == "shown" {
+		filtered.FraUnElem = block.FraUnElem
+	}
+	if block.FraSforProcElem != "" {
+		filtered.FraSforProcElem = block.FraSforProcElem
+	}
+	if block.FraInitProcElem != "" {
+		filtered.FraInitProcElem = block.FraInitProcElem
+	}
+
+	return filtered
 }

@@ -18,6 +18,14 @@ type AssessmentDiff struct {
 	CommFuncsDiff   CommFuncsDiff   `json:"comm_funcs_diff"`  // Различия в коммуникативных функциях
 	VocabularyDiff  VocabularyDiff  `json:"vocab_diff"`       // Различия в словаре
 	GeneralProgress GeneralProgress `json:"general_progress"` // Общий прогресс
+
+	Diagnosis         string `json:"diagnosis,omitempty"`
+	LivingSituation   string `json:"living_situation,omitempty"`
+	FamilyDescription string `json:"family_description,omitempty"`
+
+	OtherActBlocks      []model.ActBlockOtherRaw `json:"other_act_blocks,omitempty"`
+	FastMessages        []string                 `json:"fast_messages,omitempty"`
+	CommunicationCounts map[string]int           `json:"communication_counts,omitempty"`
 }
 
 // LangDevDiff различия в развитии языка
@@ -60,6 +68,9 @@ type GroupAverage struct {
 	Vocabulary         model.VocabularyData         `json:"vocabulary"`          // Средние значения словарного запаса
 	ActBlock           model.ActBlockData           `json:"act_block,omitempty"` // Среднее значение контроля
 	StudentsCount      int                          `json:"students_count"`      // Количество студентов в группе
+	//ActBlocksRaw               []model.ActBlockOtherRaw     `json:"act_blocks_raw,omitempty"`
+	//FastMessages               []string                     `json:"fast_messages,omitempty"`
+	//CommunicationCirclesCounts map[string]int               `json:"communication_circles_counts,omitempty"`
 }
 
 // GroupProgress - прогресс группы по датам
@@ -116,9 +127,15 @@ func (dc *DiffCalculator) Calculate(before, after *model.AssessmentDocument) (As
 
 	// Создаем структуру для различий и заполняем метаданные
 	diff := AssessmentDiff{
-		StudentID:   before.Metadata.StudentID,
-		PeriodStart: before.Metadata.Date.Format("2006-01-02"),
-		PeriodEnd:   after.Metadata.Date.Format("2006-01-02"),
+		StudentID:           before.Metadata.StudentID,
+		PeriodStart:         before.Metadata.Date.Format("2006-01-02"),
+		PeriodEnd:           after.Metadata.Date.Format("2006-01-02"),
+		Diagnosis:           after.Diagnosis,
+		LivingSituation:     after.LivingSituation,
+		FamilyDescription:   after.FamilyDescription,
+		OtherActBlocks:      after.OtherActBlocks,
+		FastMessages:        after.FastMessages,
+		CommunicationCounts: after.CommunicationCounts,
 	}
 
 	// 1. Сравнение уровней языкового развития
@@ -201,6 +218,7 @@ func (dc *DiffCalculator) CalculateGroupAverage(documents []*model.AssessmentDoc
 		}
 
 		sumLangDev.Preintentional.Activity += doc.LanguageLevels.Preintentional.Activity
+		sumLangDev.Preintentional.Initiative += doc.LanguageLevels.Preintentional.Initiative
 		sumLangDev.Protolanguage.Activity += doc.LanguageLevels.Protolanguage.Activity
 		sumLangDev.Protolanguage.Initiative += doc.LanguageLevels.Protolanguage.Initiative
 		sumLangDev.Holophrase.Activity += doc.LanguageLevels.Holophrase.Activity
@@ -219,7 +237,8 @@ func (dc *DiffCalculator) CalculateGroupAverage(documents []*model.AssessmentDoc
 
 	avgLangDev := model.LanguageDevelopment{
 		Preintentional: model.Preintentional{
-			Activity: sumLangDev.Preintentional.Activity / float64(count),
+			Activity:   sumLangDev.Preintentional.Activity / float64(count),
+			Initiative: sumLangDev.Preintentional.Initiative / float64(count),
 		},
 		Protolanguage: model.LanguageActivity{
 			Activity:   sumLangDev.Protolanguage.Activity / float64(count),
@@ -363,7 +382,6 @@ func (dc *DiffCalculator) calculateGroupActBlockAverage(documents []*model.Asses
 	if len(documents) == 0 {
 		return model.ActBlockData{}
 	}
-
 	// Инициализируем суммы
 	var protActivitySum, protInitiativeSum, protFrequencySum float64
 	var golActivitySum, golInitiativeSum, golFrequencySum float64

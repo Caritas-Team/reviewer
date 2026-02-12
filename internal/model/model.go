@@ -6,11 +6,17 @@ import (
 
 // AssessmentDocument основной документ обследования
 type AssessmentDocument struct {
-	Metadata           AssessmentMetadata     `json:"metadata"`
-	LanguageLevels     LanguageDevelopment    `json:"language_levels"`
-	CommunicativeFuncs CommunicativeFunctions `json:"communicative_functions"`
-	Vocabulary         VocabularyData         `json:"vocabulary"`
-	ActBlock           ActBlockData           `json:"act_block,omitempty"`
+	Metadata            AssessmentMetadata     `json:"metadata"`
+	LanguageLevels      LanguageDevelopment    `json:"language_levels"`
+	CommunicativeFuncs  CommunicativeFunctions `json:"communicative_functions"`
+	Vocabulary          VocabularyData         `json:"vocabulary"`
+	ActBlock            ActBlockData           `json:"act_block,omitempty"`
+	OtherActBlocks      []ActBlockOtherRaw     `json:"other_act_blocks,omitempty"`
+	FastMessages        []string               `json:"fast_messages,omitempty"`
+	CommunicationCounts map[string]int         `json:"communication_counts,omitempty"`
+	Diagnosis           string                 `json:"diagnosis,omitempty"`
+	LivingSituation     string                 `json:"living_situation,omitempty"`
+	FamilyDescription   string                 `json:"family_description,omitempty"`
 }
 
 // AssessmentMetadata метаданные оценки
@@ -30,7 +36,8 @@ type LanguageDevelopment struct {
 }
 
 type Preintentional struct {
-	Activity float64 `json:"activity"`
+	Activity   float64 `json:"activity"`
+	Initiative float64 `json:"initiative"`
 }
 
 type LanguageActivity struct {
@@ -94,4 +101,21 @@ type ActBlockData struct {
 	Prot ActivityData `json:"prot,omitempty"`
 	Gol  ActivityData `json:"gol,omitempty"`
 	Fra  ActivityData `json:"fra,omitempty"`
+}
+
+type ActBlockOtherRaw struct {
+	BlockID            string `json:"block_id,omitempty"`
+	BodyBlockElem      string `json:"bodyBlockElem,omitempty"`
+	UnavailableTagElem string `json:"unavailableTagElem,omitempty"`
+	ProtUnElem         string `json:"protUnElem,omitempty"`
+	ProtOverElem       string `json:"protOverElem,omitempty"`
+	ProtSforProcElem   string `json:"protSforProcElem,omitempty"`
+	ProtInitProcElem   string `json:"protInitProcElem,omitempty"`
+	GolUnElem          string `json:"golUnElem,omitempty"`
+	GolOverElem        string `json:"golOverElem,omitempty"`
+	GolSforProcElem    string `json:"golSforProcElem,omitempty"`
+	GolInitProcElem    string `json:"golInitProcElem,omitempty"`
+	FraUnElem          string `json:"fraUnElem,omitempty"`
+	FraSforProcElem    string `json:"fraSforProcElem,omitempty"`
+	FraInitProcElem    string `json:"fraInitProcElem,omitempty"`
 }
