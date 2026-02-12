@@ -2,7 +2,7 @@
 
 set -e
 
-run_compose() { docker compose -p dev -f docker-compose.yaml -f infra/docker-compose.prod.yaml "$@"; }
+run_compose() { docker compose -p prod -f docker-compose.yaml -f infra/docker-compose.prod.yaml "$@"; }
 
 # build containers with build sections in compose
 run_compose build -q

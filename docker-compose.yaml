@@ -27,3 +27,4 @@ services:
       - "16686:16686"
       - "14268:14268"
     restart: unless-stopped
+
