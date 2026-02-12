@@ -2,6 +2,7 @@ package assessment
 
 import (
 	"context"
+	"fmt"
 	"sort"
 	"time"
 
@@ -96,14 +97,23 @@ func (w *Worker) handle(ctx context.Context, pairs []model.StudentPair) {
 		}, w.ttl)
 	}
 
-	// Рассчитываем средние значения по группе
-	groupAverages := w.calculateGroupAverages(pairs)
+	var groupAverages []GroupAverage
+	var groupProgress []GroupProgress
+	var groupDiff []GroupVocabularyProgress
 
-	// Рассчитываем прогресс группы между датами
-	groupProgress := w.calculateGroupProgress(groupAverages)
+	if len(pairs) > 1 {
+		if err := w.validateGroupDates(pairs); err != nil {
+			w.log.Error("групповой анализ невозможен: некорректные даты", "error", err)
+		} else {
+			// Рассчитываем средние значения по группе
+			groupAverages = w.calculateGroupAverages(pairs)
 
-	groupDiff := w.calculateGroupVocabularyProgress(pairs)
+			// Рассчитываем прогресс группы между датами
+			groupProgress = w.calculateGroupProgress(groupAverages)
 
+			groupDiff = w.calculateGroupVocabularyProgress(pairs)
+		}
+	}
 	_ = w.storage.Set(ctx, requestID, &ProcessingResult{
 		Status:            "completed",
 		ProgressPercent:   100,
@@ -216,4 +226,52 @@ func (w *Worker) calculateGroupVocabularyProgress(pairs []model.StudentPair) []G
 	}
 
 	return []GroupVocabularyProgress{vocabProgress}
+}
+
+// validateSameDate проверяет, что все документы имеют одинаковую дату.
+func validateSameDate(docs []*model.AssessmentDocument) (string, error) {
+	if len(docs) == 0 {
+		return "", fmt.Errorf("пустой список документов")
+	}
+
+	firstDate := docs[0].Metadata.Date.Format("2006-01-02")
+	for i, doc := range docs {
+		curDate := doc.Metadata.Date.Format("2006-01-02")
+		if curDate != firstDate {
+			return "", fmt.Errorf("документы имеют разные даты: %s (документ 1) и %s (документ %d)",
+				firstDate, curDate, i+1)
+		}
+	}
+	return firstDate, nil
+}
+
+// validateGroupDates проверяет, что дата обследований у групп совпадает
+func (w *Worker) validateGroupDates(pairs []model.StudentPair) error {
+	if len(pairs) == 0 {
+		return nil
+	}
+
+	var beforeDocs, afterDocs []*model.AssessmentDocument
+	for _, p := range pairs {
+		if p.Before != nil {
+			beforeDocs = append(beforeDocs, p.Before)
+		}
+		if p.After != nil {
+			afterDocs = append(afterDocs, p.After)
+		}
+	}
+
+	if len(beforeDocs) > 0 {
+		if _, err := validateSameDate(beforeDocs); err != nil {
+			return fmt.Errorf("before документы: %w", err)
+		}
+	}
+
+	if len(afterDocs) > 0 {
+		if _, err := validateSameDate(afterDocs); err != nil {
+			return fmt.Errorf("after документы: %w", err)
+		}
+	}
+
+	return nil
 }
