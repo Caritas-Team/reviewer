@@ -337,19 +337,19 @@ func (dc *DiffCalculator) CalculateGroupProgress(earlierAvg, laterAvg GroupAvera
 	// Рассчитываем разницу в ActBlock данных между группами
 	actBlockDiff := GroupActBlockDiff{
 		Prot: GroupActivityDiff{
-			ActivityDelta:   laterAvg.ActBlock.Prot.ActivityPercent - earlierAvg.ActBlock.Prot.ActivityPercent,
-			InitiativeDelta: laterAvg.ActBlock.Prot.InitiativePercent - earlierAvg.ActBlock.Prot.InitiativePercent,
-			FrequencyDelta:  laterAvg.ActBlock.Prot.FrequencyPercent - earlierAvg.ActBlock.Prot.FrequencyPercent,
+			ActivityDelta:   roundToOneDecimal(laterAvg.ActBlock.Prot.ActivityPercent - earlierAvg.ActBlock.Prot.ActivityPercent),
+			InitiativeDelta: roundToOneDecimal(laterAvg.ActBlock.Prot.InitiativePercent - earlierAvg.ActBlock.Prot.InitiativePercent),
+			FrequencyDelta:  roundToOneDecimal(laterAvg.ActBlock.Prot.FrequencyPercent - earlierAvg.ActBlock.Prot.FrequencyPercent),
 		},
 		Gol: GroupActivityDiff{
-			ActivityDelta:   laterAvg.ActBlock.Gol.ActivityPercent - earlierAvg.ActBlock.Gol.ActivityPercent,
-			InitiativeDelta: laterAvg.ActBlock.Gol.InitiativePercent - earlierAvg.ActBlock.Gol.InitiativePercent,
-			FrequencyDelta:  laterAvg.ActBlock.Gol.FrequencyPercent - earlierAvg.ActBlock.Gol.FrequencyPercent,
+			ActivityDelta:   roundToOneDecimal(laterAvg.ActBlock.Gol.ActivityPercent - earlierAvg.ActBlock.Gol.ActivityPercent),
+			InitiativeDelta: roundToOneDecimal(laterAvg.ActBlock.Gol.InitiativePercent - earlierAvg.ActBlock.Gol.InitiativePercent),
+			FrequencyDelta:  roundToOneDecimal(laterAvg.ActBlock.Gol.FrequencyPercent - earlierAvg.ActBlock.Gol.FrequencyPercent),
 		},
 		Fra: GroupActivityDiff{
-			ActivityDelta:   laterAvg.ActBlock.Fra.ActivityPercent - earlierAvg.ActBlock.Fra.ActivityPercent,
-			InitiativeDelta: laterAvg.ActBlock.Fra.InitiativePercent - earlierAvg.ActBlock.Fra.InitiativePercent,
-			FrequencyDelta:  laterAvg.ActBlock.Fra.FrequencyPercent - earlierAvg.ActBlock.Fra.FrequencyPercent,
+			ActivityDelta:   roundToOneDecimal(laterAvg.ActBlock.Fra.ActivityPercent - earlierAvg.ActBlock.Fra.ActivityPercent),
+			InitiativeDelta: roundToOneDecimal(laterAvg.ActBlock.Fra.InitiativePercent - earlierAvg.ActBlock.Fra.InitiativePercent),
+			FrequencyDelta:  roundToOneDecimal(laterAvg.ActBlock.Fra.FrequencyPercent - earlierAvg.ActBlock.Fra.FrequencyPercent),
 		},
 	}
 
@@ -357,10 +357,10 @@ func (dc *DiffCalculator) CalculateGroupProgress(earlierAvg, laterAvg GroupAvera
 		PeriodStart: earlierAvg.Date,
 		PeriodEnd:   laterAvg.Date,
 		LanguageLevels: GroupLanguageLevels{
-			Preintentional: GroupLevelProgress{ActivityPercent: preintentionalPercent},
-			Protolanguage:  GroupLevelProgress{ActivityPercent: protolanguagePercent},
-			Holophrase:     GroupLevelProgress{ActivityPercent: holophrasePercent},
-			Phrase:         GroupLevelProgress{ActivityPercent: phrasePercent},
+			Preintentional: GroupLevelProgress{ActivityPercent: roundToOneDecimal(preintentionalPercent)},
+			Protolanguage:  GroupLevelProgress{ActivityPercent: roundToOneDecimal(protolanguagePercent)},
+			Holophrase:     GroupLevelProgress{ActivityPercent: roundToOneDecimal(holophrasePercent)},
+			Phrase:         GroupLevelProgress{ActivityPercent: roundToOneDecimal(phrasePercent)},
 		},
 		ActBlockDiff: actBlockDiff,
 	}, nil
@@ -387,19 +387,19 @@ func (dc *DiffCalculator) CalculateGroupActBlockDiff(beforeDocs, afterDocs []*mo
 	// Сравниваем средние значения
 	return GroupActBlockDiff{
 		Prot: GroupActivityDiff{
-			ActivityDelta:   afterAvg.Prot.ActivityPercent - beforeAvg.Prot.ActivityPercent,
-			InitiativeDelta: afterAvg.Prot.InitiativePercent - beforeAvg.Prot.InitiativePercent,
-			FrequencyDelta:  afterAvg.Prot.FrequencyPercent - beforeAvg.Prot.FrequencyPercent,
+			ActivityDelta:   roundToOneDecimal(afterAvg.Prot.ActivityPercent - beforeAvg.Prot.ActivityPercent),
+			InitiativeDelta: roundToOneDecimal(afterAvg.Prot.InitiativePercent - beforeAvg.Prot.InitiativePercent),
+			FrequencyDelta:  roundToOneDecimal(afterAvg.Prot.FrequencyPercent - beforeAvg.Prot.FrequencyPercent),
 		},
 		Gol: GroupActivityDiff{
-			ActivityDelta:   afterAvg.Gol.ActivityPercent - beforeAvg.Gol.ActivityPercent,
-			InitiativeDelta: afterAvg.Gol.InitiativePercent - beforeAvg.Gol.InitiativePercent,
-			FrequencyDelta:  afterAvg.Gol.FrequencyPercent - beforeAvg.Gol.FrequencyPercent,
+			ActivityDelta:   roundToOneDecimal(afterAvg.Gol.ActivityPercent - beforeAvg.Gol.ActivityPercent),
+			InitiativeDelta: roundToOneDecimal(afterAvg.Gol.InitiativePercent - beforeAvg.Gol.InitiativePercent),
+			FrequencyDelta:  roundToOneDecimal(afterAvg.Gol.FrequencyPercent - beforeAvg.Gol.FrequencyPercent),
 		},
 		Fra: GroupActivityDiff{
-			ActivityDelta:   afterAvg.Fra.ActivityPercent - beforeAvg.Fra.ActivityPercent,
-			InitiativeDelta: afterAvg.Fra.InitiativePercent - beforeAvg.Fra.InitiativePercent,
-			FrequencyDelta:  afterAvg.Fra.FrequencyPercent - beforeAvg.Fra.FrequencyPercent,
+			ActivityDelta:   roundToOneDecimal(afterAvg.Fra.ActivityPercent - beforeAvg.Fra.ActivityPercent),
+			InitiativeDelta: roundToOneDecimal(afterAvg.Fra.InitiativePercent - beforeAvg.Fra.InitiativePercent),
+			FrequencyDelta:  roundToOneDecimal(afterAvg.Fra.FrequencyPercent - beforeAvg.Fra.FrequencyPercent),
 		},
 	}
 
