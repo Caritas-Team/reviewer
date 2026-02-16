@@ -91,10 +91,11 @@ func (p *DocumentParser) Parse(r io.Reader, filename string) (*model.AssessmentD
 		{fullRawData.ActBlock16, "actBlock16"},
 		{fullRawData.ActBlock18, "actBlock18"},
 	}
+	doc.OtherActBlocks = make(map[string]model.ActBlockOtherRaw)
 
 	for _, b := range otherBlocks {
-		filtered := filterActBlockOther(b.block, b.id)
-		doc.OtherActBlocks = append(doc.OtherActBlocks, filtered)
+		filtered := filterActBlockOther(b.block)
+		doc.OtherActBlocks[b.id] = filtered
 	}
 
 	doc.FastMessages = fullRawData.DictBystrSoobsh
@@ -126,6 +127,25 @@ func (p *DocumentParser) Parse(r io.Reader, filename string) (*model.AssessmentD
 			doc.CommunicationCounts = counts
 		}
 	}
+
+	doc.DiagramRaw = model.DiagramRaw{
+		PredActProcNumElem:  fullRawData.DiagramBlock.PredActProcNumElem,
+		PredInitProcNumElem: fullRawData.DiagramBlock.PredInitProcNumElem,
+		ProtActProcNumElem:  fullRawData.DiagramBlock.ProtActProcNumElem,
+		ProtInitProcNumElem: fullRawData.DiagramBlock.ProtInitProcNumElem,
+		GolActProcNumElem:   fullRawData.DiagramBlock.GolActProcNumElem,
+		GolInitProcNumElem:  fullRawData.DiagramBlock.GolInitProcNumElem,
+		FraActProcNumElem:   fullRawData.DiagramBlock.FraActProcNumElem,
+		FraInitProcNumElem:  fullRawData.DiagramBlock.FraInitProcNumElem,
+	}
+
+	doc.NewAct01Raw = fullRawData.NewAct01.ProcNumElem
+	doc.NewAct02Raw = fullRawData.NewAct02.ProcNumElem
+	doc.NewAct03Raw = fullRawData.NewAct03.ProcNumElem
+	doc.NewAct04Raw = fullRawData.NewAct04.ProcNumElem
+
+	birthDate := extractFromDivTag(fullRawData.Por03)
+	doc.BirthDate = birthDate
 
 	return doc, nil
 }
@@ -176,6 +196,7 @@ type ActBlockOther struct {
 type FullRawJSON struct {
 	Por01    string      `json:"por01"` // Дата в формате <div>2025-11-11</div>
 	Por02    string      `json:"por02"` // Student ID в формате <div>123</div>
+	Por03    string      `json:"por03"`
 	Por04    string      `json:"por04"`
 	Por05    string      `json:"por05"`
 	Por06    string      `json:"por06"`
@@ -395,10 +416,8 @@ func (p *DocumentParser) parseActBlockData(raw *FullRawJSON, doc *model.Assessme
 	doc.ActBlock.Fra.FrequencyPercent = parsePercentStr(raw.ActBlock01.FraChastProcElem)
 }
 
-func filterActBlockOther(block ActBlockOther, blockID string) model.ActBlockOtherRaw {
-	filtered := model.ActBlockOtherRaw{
-		BlockID: blockID,
-	}
+func filterActBlockOther(block ActBlockOther) model.ActBlockOtherRaw {
+	filtered := model.ActBlockOtherRaw{}
 
 	if block.BodyBlockElem == "hidden" {
 		filtered.BodyBlockElem = block.BodyBlockElem

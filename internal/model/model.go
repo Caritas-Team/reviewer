@@ -6,17 +6,24 @@ import (
 
 // AssessmentDocument основной документ обследования
 type AssessmentDocument struct {
-	Metadata            AssessmentMetadata     `json:"metadata"`
-	LanguageLevels      LanguageDevelopment    `json:"language_levels"`
-	CommunicativeFuncs  CommunicativeFunctions `json:"communicative_functions"`
-	Vocabulary          VocabularyData         `json:"vocabulary"`
-	ActBlock            ActBlockData           `json:"act_block,omitempty"`
-	OtherActBlocks      []ActBlockOtherRaw     `json:"other_act_blocks,omitempty"`
-	FastMessages        []string               `json:"fast_messages,omitempty"`
-	CommunicationCounts map[string]int         `json:"communication_counts,omitempty"`
-	Diagnosis           string                 `json:"diagnosis,omitempty"`
-	LivingSituation     string                 `json:"living_situation,omitempty"`
-	FamilyDescription   string                 `json:"family_description,omitempty"`
+	Metadata            AssessmentMetadata          `json:"metadata"`
+	LanguageLevels      LanguageDevelopment         `json:"language_levels"`
+	CommunicativeFuncs  CommunicativeFunctions      `json:"communicative_functions"`
+	Vocabulary          VocabularyData              `json:"vocabulary"`
+	ActBlock            ActBlockData                `json:"act_block,omitempty"`
+	OtherActBlocks      map[string]ActBlockOtherRaw `json:"other_act_blocks,omitempty"`
+	FastMessages        []string                    `json:"fast_messages,omitempty"`
+	CommunicationCounts map[string]int              `json:"communication_counts,omitempty"`
+	Diagnosis           string                      `json:"diagnosis,omitempty"`
+	LivingSituation     string                      `json:"living_situation,omitempty"`
+	FamilyDescription   string                      `json:"family_description,omitempty"`
+	BirthDate           string                      `json:"birth_date,omitempty"`
+
+	DiagramRaw  DiagramRaw `json:"diagram_raw,omitempty"`
+	NewAct01Raw string     `json:"newAct01_raw,omitempty"`
+	NewAct02Raw string     `json:"newAct02_raw,omitempty"`
+	NewAct03Raw string     `json:"newAct03_raw,omitempty"`
+	NewAct04Raw string     `json:"newAct04_raw,omitempty"`
 }
 
 // AssessmentMetadata метаданные оценки
@@ -104,7 +111,6 @@ type ActBlockData struct {
 }
 
 type ActBlockOtherRaw struct {
-	BlockID            string `json:"block_id,omitempty"`
 	BodyBlockElem      string `json:"bodyBlockElem,omitempty"`
 	UnavailableTagElem string `json:"unavailableTagElem,omitempty"`
 	ProtUnElem         string `json:"protUnElem,omitempty"`
@@ -118,4 +124,15 @@ type ActBlockOtherRaw struct {
 	FraUnElem          string `json:"fraUnElem,omitempty"`
 	FraSforProcElem    string `json:"fraSforProcElem,omitempty"`
 	FraInitProcElem    string `json:"fraInitProcElem,omitempty"`
+}
+
+type DiagramRaw struct {
+	PredActProcNumElem  string `json:"predActProcNumElem"`
+	PredInitProcNumElem string `json:"predInitProcNumElem"`
+	ProtActProcNumElem  string `json:"protActProcNumElem"`
+	ProtInitProcNumElem string `json:"protInitProcNumElem"`
+	GolActProcNumElem   string `json:"golActProcNumElem"`
+	GolInitProcNumElem  string `json:"golInitProcNumElem"`
+	FraActProcNumElem   string `json:"fraActProcNumElem"`
+	FraInitProcNumElem  string `json:"fraInitProcNumElem"`
 }
