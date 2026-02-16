@@ -2,6 +2,7 @@ package assessment
 
 import (
 	"fmt"
+	"math"
 
 	"github.com/Caritas-Team/reviewer/internal/model"
 )
@@ -11,9 +12,10 @@ type DiffCalculator struct{}
 
 // AssessmentDiff - результат сравнения "до/после"
 type AssessmentDiff struct {
-	StudentID       string          `json:"student_id"`       // ID студента
-	PeriodStart     string          `json:"period_start"`     // Начальная дата периода
-	PeriodEnd       string          `json:"period_end"`       // Конечная дата периода
+	StudentID       string          `json:"student_id"`   // ID студента
+	PeriodStart     string          `json:"period_start"` // Начальная дата периода
+	PeriodEnd       string          `json:"period_end"`   // Конечная дата периода
+	BirthDate       string          `json:"birth_date"`
 	LangDevDiff     LangDevDiff     `json:"lang_dev_diff"`    // Различия в развитии языка
 	CommFuncsDiff   CommFuncsDiff   `json:"comm_funcs_diff"`  // Различия в коммуникативных функциях
 	VocabularyDiff  VocabularyDiff  `json:"vocab_diff"`       // Различия в словаре
@@ -23,9 +25,21 @@ type AssessmentDiff struct {
 	LivingSituation   string `json:"living_situation,omitempty"`
 	FamilyDescription string `json:"family_description,omitempty"`
 
-	OtherActBlocks      []model.ActBlockOtherRaw `json:"other_act_blocks,omitempty"`
-	FastMessages        []string                 `json:"fast_messages,omitempty"`
-	CommunicationCounts map[string]int           `json:"communication_counts,omitempty"`
+	BeforeData IndividualData `json:"before_data,omitempty"`
+	AfterData  IndividualData `json:"after_data,omitempty"`
+
+	FastMessages        []string       `json:"fast_messages,omitempty"`
+	CommunicationCounts map[string]int `json:"communication_counts,omitempty"`
+}
+
+// IndividualData Данные из DiagramBlock и NewAct
+type IndividualData struct {
+	DiagramRaw     model.DiagramRaw                  `json:"diagram_raw"`
+	NewAct01       string                            `json:"newAct01"`
+	NewAct02       string                            `json:"newAct02"`
+	NewAct03       string                            `json:"newAct03"`
+	NewAct04       string                            `json:"newAct04"`
+	OtherActBlocks map[string]model.ActBlockOtherRaw `json:"other_act_blocks,omitempty"`
 }
 
 // LangDevDiff различия в развитии языка
@@ -68,9 +82,7 @@ type GroupAverage struct {
 	Vocabulary         model.VocabularyData         `json:"vocabulary"`          // Средние значения словарного запаса
 	ActBlock           model.ActBlockData           `json:"act_block,omitempty"` // Среднее значение контроля
 	StudentsCount      int                          `json:"students_count"`      // Количество студентов в группе
-	//ActBlocksRaw               []model.ActBlockOtherRaw     `json:"act_blocks_raw,omitempty"`
-	//FastMessages               []string                     `json:"fast_messages,omitempty"`
-	//CommunicationCirclesCounts map[string]int               `json:"communication_circles_counts,omitempty"`
+
 }
 
 // GroupProgress - прогресс группы по датам
@@ -127,13 +139,29 @@ func (dc *DiffCalculator) Calculate(before, after *model.AssessmentDocument) (As
 
 	// Создаем структуру для различий и заполняем метаданные
 	diff := AssessmentDiff{
-		StudentID:           before.Metadata.StudentID,
-		PeriodStart:         before.Metadata.Date.Format("2006-01-02"),
-		PeriodEnd:           after.Metadata.Date.Format("2006-01-02"),
-		Diagnosis:           after.Diagnosis,
-		LivingSituation:     after.LivingSituation,
-		FamilyDescription:   after.FamilyDescription,
-		OtherActBlocks:      after.OtherActBlocks,
+		StudentID:         before.Metadata.StudentID,
+		PeriodStart:       before.Metadata.Date.Format("2006-01-02"),
+		PeriodEnd:         after.Metadata.Date.Format("2006-01-02"),
+		BirthDate:         after.BirthDate,
+		Diagnosis:         after.Diagnosis,
+		LivingSituation:   after.LivingSituation,
+		FamilyDescription: after.FamilyDescription,
+		BeforeData: IndividualData{
+			DiagramRaw:     before.DiagramRaw,
+			NewAct01:       before.NewAct01Raw,
+			NewAct02:       before.NewAct02Raw,
+			NewAct03:       before.NewAct03Raw,
+			NewAct04:       before.NewAct04Raw,
+			OtherActBlocks: before.OtherActBlocks,
+		},
+		AfterData: IndividualData{
+			DiagramRaw:     after.DiagramRaw,
+			NewAct01:       after.NewAct01Raw,
+			NewAct02:       after.NewAct02Raw,
+			NewAct03:       after.NewAct03Raw,
+			NewAct04:       after.NewAct04Raw,
+			OtherActBlocks: after.OtherActBlocks,
+		},
 		FastMessages:        after.FastMessages,
 		CommunicationCounts: after.CommunicationCounts,
 	}
@@ -237,28 +265,28 @@ func (dc *DiffCalculator) CalculateGroupAverage(documents []*model.AssessmentDoc
 
 	avgLangDev := model.LanguageDevelopment{
 		Preintentional: model.Preintentional{
-			Activity:   sumLangDev.Preintentional.Activity / float64(count),
-			Initiative: sumLangDev.Preintentional.Initiative / float64(count),
+			Activity:   roundToOneDecimal(sumLangDev.Preintentional.Activity / float64(count)),
+			Initiative: roundToOneDecimal(sumLangDev.Preintentional.Initiative / float64(count)),
 		},
 		Protolanguage: model.LanguageActivity{
-			Activity:   sumLangDev.Protolanguage.Activity / float64(count),
-			Initiative: sumLangDev.Protolanguage.Initiative / float64(count),
+			Activity:   roundToOneDecimal(sumLangDev.Protolanguage.Activity / float64(count)),
+			Initiative: roundToOneDecimal(sumLangDev.Protolanguage.Initiative / float64(count)),
 		},
 		Holophrase: model.LanguageActivity{
-			Activity:   sumLangDev.Holophrase.Activity / float64(count),
-			Initiative: sumLangDev.Holophrase.Initiative / float64(count),
+			Activity:   roundToOneDecimal(sumLangDev.Holophrase.Activity / float64(count)),
+			Initiative: roundToOneDecimal(sumLangDev.Holophrase.Initiative / float64(count)),
 		},
 		Phrase: model.LanguageActivity{
-			Activity:   sumLangDev.Phrase.Activity / float64(count),
-			Initiative: sumLangDev.Phrase.Initiative / float64(count),
+			Activity:   roundToOneDecimal(sumLangDev.Phrase.Activity / float64(count)),
+			Initiative: roundToOneDecimal(sumLangDev.Phrase.Initiative / float64(count)),
 		},
 	}
 
 	avgCommFuncs := model.CommunicativeFunctions{
-		Control:             sumCommFuncs.Control / float64(count),
-		ObtainingDesired:    sumCommFuncs.ObtainingDesired / float64(count),
-		SocialInteraction:   sumCommFuncs.SocialInteraction / float64(count),
-		InformationExchange: sumCommFuncs.InformationExchange / float64(count),
+		Control:             roundToOneDecimal(sumCommFuncs.Control / float64(count)),
+		ObtainingDesired:    roundToOneDecimal(sumCommFuncs.ObtainingDesired / float64(count)),
+		SocialInteraction:   roundToOneDecimal(sumCommFuncs.SocialInteraction / float64(count)),
+		InformationExchange: roundToOneDecimal(sumCommFuncs.InformationExchange / float64(count)),
 	}
 
 	avgVocab := model.VocabularyData{
@@ -309,19 +337,19 @@ func (dc *DiffCalculator) CalculateGroupProgress(earlierAvg, laterAvg GroupAvera
 	// Рассчитываем разницу в ActBlock данных между группами
 	actBlockDiff := GroupActBlockDiff{
 		Prot: GroupActivityDiff{
-			ActivityDelta:   laterAvg.ActBlock.Prot.ActivityPercent - earlierAvg.ActBlock.Prot.ActivityPercent,
-			InitiativeDelta: laterAvg.ActBlock.Prot.InitiativePercent - earlierAvg.ActBlock.Prot.InitiativePercent,
-			FrequencyDelta:  laterAvg.ActBlock.Prot.FrequencyPercent - earlierAvg.ActBlock.Prot.FrequencyPercent,
+			ActivityDelta:   roundToOneDecimal(laterAvg.ActBlock.Prot.ActivityPercent - earlierAvg.ActBlock.Prot.ActivityPercent),
+			InitiativeDelta: roundToOneDecimal(laterAvg.ActBlock.Prot.InitiativePercent - earlierAvg.ActBlock.Prot.InitiativePercent),
+			FrequencyDelta:  roundToOneDecimal(laterAvg.ActBlock.Prot.FrequencyPercent - earlierAvg.ActBlock.Prot.FrequencyPercent),
 		},
 		Gol: GroupActivityDiff{
-			ActivityDelta:   laterAvg.ActBlock.Gol.ActivityPercent - earlierAvg.ActBlock.Gol.ActivityPercent,
-			InitiativeDelta: laterAvg.ActBlock.Gol.InitiativePercent - earlierAvg.ActBlock.Gol.InitiativePercent,
-			FrequencyDelta:  laterAvg.ActBlock.Gol.FrequencyPercent - earlierAvg.ActBlock.Gol.FrequencyPercent,
+			ActivityDelta:   roundToOneDecimal(laterAvg.ActBlock.Gol.ActivityPercent - earlierAvg.ActBlock.Gol.ActivityPercent),
+			InitiativeDelta: roundToOneDecimal(laterAvg.ActBlock.Gol.InitiativePercent - earlierAvg.ActBlock.Gol.InitiativePercent),
+			FrequencyDelta:  roundToOneDecimal(laterAvg.ActBlock.Gol.FrequencyPercent - earlierAvg.ActBlock.Gol.FrequencyPercent),
 		},
 		Fra: GroupActivityDiff{
-			ActivityDelta:   laterAvg.ActBlock.Fra.ActivityPercent - earlierAvg.ActBlock.Fra.ActivityPercent,
-			InitiativeDelta: laterAvg.ActBlock.Fra.InitiativePercent - earlierAvg.ActBlock.Fra.InitiativePercent,
-			FrequencyDelta:  laterAvg.ActBlock.Fra.FrequencyPercent - earlierAvg.ActBlock.Fra.FrequencyPercent,
+			ActivityDelta:   roundToOneDecimal(laterAvg.ActBlock.Fra.ActivityPercent - earlierAvg.ActBlock.Fra.ActivityPercent),
+			InitiativeDelta: roundToOneDecimal(laterAvg.ActBlock.Fra.InitiativePercent - earlierAvg.ActBlock.Fra.InitiativePercent),
+			FrequencyDelta:  roundToOneDecimal(laterAvg.ActBlock.Fra.FrequencyPercent - earlierAvg.ActBlock.Fra.FrequencyPercent),
 		},
 	}
 
@@ -329,10 +357,10 @@ func (dc *DiffCalculator) CalculateGroupProgress(earlierAvg, laterAvg GroupAvera
 		PeriodStart: earlierAvg.Date,
 		PeriodEnd:   laterAvg.Date,
 		LanguageLevels: GroupLanguageLevels{
-			Preintentional: GroupLevelProgress{ActivityPercent: preintentionalPercent},
-			Protolanguage:  GroupLevelProgress{ActivityPercent: protolanguagePercent},
-			Holophrase:     GroupLevelProgress{ActivityPercent: holophrasePercent},
-			Phrase:         GroupLevelProgress{ActivityPercent: phrasePercent},
+			Preintentional: GroupLevelProgress{ActivityPercent: roundToOneDecimal(preintentionalPercent)},
+			Protolanguage:  GroupLevelProgress{ActivityPercent: roundToOneDecimal(protolanguagePercent)},
+			Holophrase:     GroupLevelProgress{ActivityPercent: roundToOneDecimal(holophrasePercent)},
+			Phrase:         GroupLevelProgress{ActivityPercent: roundToOneDecimal(phrasePercent)},
 		},
 		ActBlockDiff: actBlockDiff,
 	}, nil
@@ -359,19 +387,19 @@ func (dc *DiffCalculator) CalculateGroupActBlockDiff(beforeDocs, afterDocs []*mo
 	// Сравниваем средние значения
 	return GroupActBlockDiff{
 		Prot: GroupActivityDiff{
-			ActivityDelta:   afterAvg.Prot.ActivityPercent - beforeAvg.Prot.ActivityPercent,
-			InitiativeDelta: afterAvg.Prot.InitiativePercent - beforeAvg.Prot.InitiativePercent,
-			FrequencyDelta:  afterAvg.Prot.FrequencyPercent - beforeAvg.Prot.FrequencyPercent,
+			ActivityDelta:   roundToOneDecimal(afterAvg.Prot.ActivityPercent - beforeAvg.Prot.ActivityPercent),
+			InitiativeDelta: roundToOneDecimal(afterAvg.Prot.InitiativePercent - beforeAvg.Prot.InitiativePercent),
+			FrequencyDelta:  roundToOneDecimal(afterAvg.Prot.FrequencyPercent - beforeAvg.Prot.FrequencyPercent),
 		},
 		Gol: GroupActivityDiff{
-			ActivityDelta:   afterAvg.Gol.ActivityPercent - beforeAvg.Gol.ActivityPercent,
-			InitiativeDelta: afterAvg.Gol.InitiativePercent - beforeAvg.Gol.InitiativePercent,
-			FrequencyDelta:  afterAvg.Gol.FrequencyPercent - beforeAvg.Gol.FrequencyPercent,
+			ActivityDelta:   roundToOneDecimal(afterAvg.Gol.ActivityPercent - beforeAvg.Gol.ActivityPercent),
+			InitiativeDelta: roundToOneDecimal(afterAvg.Gol.InitiativePercent - beforeAvg.Gol.InitiativePercent),
+			FrequencyDelta:  roundToOneDecimal(afterAvg.Gol.FrequencyPercent - beforeAvg.Gol.FrequencyPercent),
 		},
 		Fra: GroupActivityDiff{
-			ActivityDelta:   afterAvg.Fra.ActivityPercent - beforeAvg.Fra.ActivityPercent,
-			InitiativeDelta: afterAvg.Fra.InitiativePercent - beforeAvg.Fra.InitiativePercent,
-			FrequencyDelta:  afterAvg.Fra.FrequencyPercent - beforeAvg.Fra.FrequencyPercent,
+			ActivityDelta:   roundToOneDecimal(afterAvg.Fra.ActivityPercent - beforeAvg.Fra.ActivityPercent),
+			InitiativeDelta: roundToOneDecimal(afterAvg.Fra.InitiativePercent - beforeAvg.Fra.InitiativePercent),
+			FrequencyDelta:  roundToOneDecimal(afterAvg.Fra.FrequencyPercent - beforeAvg.Fra.FrequencyPercent),
 		},
 	}
 
@@ -409,19 +437,19 @@ func (dc *DiffCalculator) calculateGroupActBlockAverage(documents []*model.Asses
 	count := float64(len(documents))
 	return model.ActBlockData{
 		Prot: model.ActivityData{
-			ActivityPercent:   protActivitySum / count,
-			InitiativePercent: protInitiativeSum / count,
-			FrequencyPercent:  protFrequencySum / count,
+			ActivityPercent:   roundToOneDecimal(protActivitySum / count),
+			InitiativePercent: roundToOneDecimal(protInitiativeSum / count),
+			FrequencyPercent:  roundToOneDecimal(protFrequencySum / count),
 		},
 		Gol: model.ActivityData{
-			ActivityPercent:   golActivitySum / count,
-			InitiativePercent: golInitiativeSum / count,
-			FrequencyPercent:  golFrequencySum / count,
+			ActivityPercent:   roundToOneDecimal(golActivitySum / count),
+			InitiativePercent: roundToOneDecimal(golInitiativeSum / count),
+			FrequencyPercent:  roundToOneDecimal(golFrequencySum / count),
 		},
 		Fra: model.ActivityData{
-			ActivityPercent:   fraActivitySum / count,
-			InitiativePercent: fraInitiativeSum / count,
-			FrequencyPercent:  fraFrequencySum / count,
+			ActivityPercent:   roundToOneDecimal(fraActivitySum / count),
+			InitiativePercent: roundToOneDecimal(fraInitiativeSum / count),
+			FrequencyPercent:  roundToOneDecimal(fraFrequencySum / count),
 		},
 	}
 }
@@ -464,15 +492,14 @@ func (dc *DiffCalculator) CalculateGroupVocabularyProgress(earlierDocs, laterDoc
 	}
 
 	newWordsAfter := afterActiveSum + afterVerbalSum + afterAdditionalSum
-
 	newWordsBefore := beforeActiveSum + beforeVerbalSum + beforeAdditionalSum
 	newWordsDiff := newWordsAfter - newWordsBefore
 
-	verbalWordsCount := afterVerbalSum + beforeVerbalSum
+	verbalWordsCount := afterVerbalSum
 
 	verbalWordsDiff := afterVerbalSum - beforeVerbalSum
 
-	additionalWordsCount := afterAdditionalSum + beforeAdditionalSum
+	additionalWordsCount := afterAdditionalSum
 
 	additionalWordsDiff := afterAdditionalSum - beforeAdditionalSum
 
@@ -514,4 +541,8 @@ func (dc *DiffCalculator) findCommonCommunicationWays(allWays [][]string) []stri
 	}
 
 	return result
+}
+
+func roundToOneDecimal(v float64) float64 {
+	return math.Round(v*10) / 10
 }

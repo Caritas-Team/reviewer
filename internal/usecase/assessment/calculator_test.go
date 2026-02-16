@@ -234,13 +234,13 @@ func TestDiffCalculator_CalculateGroupAverage(t *testing.T) {
 		assert.InDelta(t, 55.0, avg.LanguageLevels.Phrase.Initiative, 0.01)
 
 		// Коммуникативные функции: (10+20+5)/3 = 11.67
-		assert.InDelta(t, 11.67, avg.CommunicativeFuncs.Control, 0.01)
+		assert.InDelta(t, 11.7, avg.CommunicativeFuncs.Control, 0.01)
 		// (15+25+10)/3 = 16.67
-		assert.InDelta(t, 16.67, avg.CommunicativeFuncs.ObtainingDesired, 0.01)
+		assert.InDelta(t, 16.7, avg.CommunicativeFuncs.ObtainingDesired, 0.01)
 		// (20+30+15)/3 = 21.67
-		assert.InDelta(t, 21.67, avg.CommunicativeFuncs.SocialInteraction, 0.01)
+		assert.InDelta(t, 21.7, avg.CommunicativeFuncs.SocialInteraction, 0.01)
 		// (25+35+20)/3 = 26.67
-		assert.InDelta(t, 26.67, avg.CommunicativeFuncs.InformationExchange, 0.01)
+		assert.InDelta(t, 26.7, avg.CommunicativeFuncs.InformationExchange, 0.01)
 
 		// Словарь: (100+120+80)/3 = 100
 		assert.Equal(t, 100, avg.Vocabulary.ActiveWordsCount)
@@ -249,23 +249,23 @@ func TestDiffCalculator_CalculateGroupAverage(t *testing.T) {
 		assert.Nil(t, avg.Vocabulary.AdditionalWords)
 
 		// Prot Activity: (90 + 68 + 75) / 3 = 77.67
-		assert.InDelta(t, 77.67, avg.ActBlock.Prot.ActivityPercent, 0.01)
+		assert.InDelta(t, 77.7, avg.ActBlock.Prot.ActivityPercent, 0.01)
 		// Prot Initiative: (80 + 80 + 85) / 3 = 81.67
-		assert.InDelta(t, 81.67, avg.ActBlock.Prot.InitiativePercent, 0.01)
+		assert.InDelta(t, 81.7, avg.ActBlock.Prot.InitiativePercent, 0.01)
 		// Prot Frequency: (90 + 50 + 70) / 3 = 70.0
 		assert.InDelta(t, 70.0, avg.ActBlock.Prot.FrequencyPercent, 0.01)
 
 		// Gol Activity: (7 + 0 + 5) / 3 = 4.0
 		assert.InDelta(t, 4.0, avg.ActBlock.Gol.ActivityPercent, 0.01)
 		// Gol Initiative: (33 + 0 + 20) / 3 = 17.67
-		assert.InDelta(t, 17.67, avg.ActBlock.Gol.InitiativePercent, 0.01)
+		assert.InDelta(t, 17.7, avg.ActBlock.Gol.InitiativePercent, 0.01)
 		// Gol Frequency: (90 + 0 + 60) / 3 = 50.0
 		assert.InDelta(t, 50.0, avg.ActBlock.Gol.FrequencyPercent, 0.01)
 
 		// Fra Activity: (0 + 0 + 3) / 3 = 1.0
 		assert.InDelta(t, 1.0, avg.ActBlock.Fra.ActivityPercent, 0.01)
 		// Fra Initiative: (0 + 0 + 8) / 3 = 2.67
-		assert.InDelta(t, 2.67, avg.ActBlock.Fra.InitiativePercent, 0.01)
+		assert.InDelta(t, 2.7, avg.ActBlock.Fra.InitiativePercent, 0.01)
 		// Fra Frequency: (0 + 0 + 12) / 3 = 4.0
 		assert.InDelta(t, 4.0, avg.ActBlock.Fra.FrequencyPercent, 0.01)
 	})
@@ -409,13 +409,13 @@ func TestDiffCalculator_CalculateGroupAverage(t *testing.T) {
 		assert.InDelta(t, 60.0, avg.LanguageLevels.Phrase.Initiative, 0.01)
 
 		// Коммуникативные функции: (15+25+10)/3 = 16.67
-		assert.InDelta(t, 16.67, avg.CommunicativeFuncs.Control, 0.01)
+		assert.InDelta(t, 16.7, avg.CommunicativeFuncs.Control, 0.01)
 		// (20+30+15)/3 = 21.67
-		assert.InDelta(t, 21.67, avg.CommunicativeFuncs.ObtainingDesired, 0.01)
+		assert.InDelta(t, 21.7, avg.CommunicativeFuncs.ObtainingDesired, 0.01)
 		// (25+35+20)/3 = 26.67
-		assert.InDelta(t, 26.67, avg.CommunicativeFuncs.SocialInteraction, 0.01)
+		assert.InDelta(t, 26.7, avg.CommunicativeFuncs.SocialInteraction, 0.01)
 		// (30+40+25)/3 = 31.67
-		assert.InDelta(t, 31.67, avg.CommunicativeFuncs.InformationExchange, 0.01)
+		assert.InDelta(t, 31.7, avg.CommunicativeFuncs.InformationExchange, 0.01)
 
 		// Словарь: (110+130+90)/3 = 110
 		assert.Equal(t, 110, avg.Vocabulary.ActiveWordsCount)
@@ -424,25 +424,25 @@ func TestDiffCalculator_CalculateGroupAverage(t *testing.T) {
 		assert.Nil(t, avg.Vocabulary.AdditionalWords)
 
 		// Prot Activity: (68 + 75 + 60) / 3 = 67.67
-		assert.InDelta(t, 67.67, avg.ActBlock.Prot.ActivityPercent, 0.01)
+		assert.InDelta(t, 67.7, avg.ActBlock.Prot.ActivityPercent, 0.01)
 		// Prot Initiative: (80 + 85 + 75) / 3 = 80.0
 		assert.InDelta(t, 80.0, avg.ActBlock.Prot.InitiativePercent, 0.01)
 		// Prot Frequency: (50 + 65 + 45) / 3 = 53.33
-		assert.InDelta(t, 53.33, avg.ActBlock.Prot.FrequencyPercent, 0.01)
+		assert.InDelta(t, 53.3, avg.ActBlock.Prot.FrequencyPercent, 0.01)
 
 		// Gol Activity: (0 + 10 + 3) / 3 = 4.33
-		assert.InDelta(t, 4.33, avg.ActBlock.Gol.ActivityPercent, 0.01)
+		assert.InDelta(t, 4.3, avg.ActBlock.Gol.ActivityPercent, 0.01)
 		// Gol Initiative: (0 + 40 + 25) / 3 = 21.67
-		assert.InDelta(t, 21.67, avg.ActBlock.Gol.InitiativePercent, 0.01)
+		assert.InDelta(t, 21.7, avg.ActBlock.Gol.InitiativePercent, 0.01)
 		// Gol Frequency: (0 + 75 + 50) / 3 = 41.67
-		assert.InDelta(t, 41.67, avg.ActBlock.Gol.FrequencyPercent, 0.01)
+		assert.InDelta(t, 41.7, avg.ActBlock.Gol.FrequencyPercent, 0.01)
 
 		// Fra Activity: (0 + 5 + 0) / 3 = 1.67
-		assert.InDelta(t, 1.67, avg.ActBlock.Fra.ActivityPercent, 0.01)
+		assert.InDelta(t, 1.7, avg.ActBlock.Fra.ActivityPercent, 0.01)
 		// Fra Initiative: (0 + 15 + 0) / 3 = 5.0
 		assert.InDelta(t, 5.0, avg.ActBlock.Fra.InitiativePercent, 0.01)
 		// Fra Frequency: (0 + 20 + 0) / 3 = 6.67
-		assert.InDelta(t, 6.67, avg.ActBlock.Fra.FrequencyPercent, 0.01)
+		assert.InDelta(t, 6.7, avg.ActBlock.Fra.FrequencyPercent, 0.01)
 	})
 
 	t.Run("documents with different dates returns error", func(t *testing.T) {
@@ -571,11 +571,11 @@ func TestDiffCalculator_CalculateGroupProgress(t *testing.T) {
 		// Preintentional: ((55-50)/50)*100 = 10%
 		assert.InDelta(t, 10.0, progress.LanguageLevels.Preintentional.ActivityPercent, 0.01)
 		// Protolanguage: ((35-30)/30)*100 = 16.67%
-		assert.InDelta(t, 16.67, progress.LanguageLevels.Protolanguage.ActivityPercent, 0.01)
+		assert.InDelta(t, 16.7, progress.LanguageLevels.Protolanguage.ActivityPercent, 0.01)
 		// Holophrase: ((45-40)/40)*100 = 12.5%
 		assert.InDelta(t, 12.5, progress.LanguageLevels.Holophrase.ActivityPercent, 0.01)
 		// Phrase: ((65-60)/60)*100 = 8.33%
-		assert.InDelta(t, 8.33, progress.LanguageLevels.Phrase.ActivityPercent, 0.01)
+		assert.InDelta(t, 8.3, progress.LanguageLevels.Phrase.ActivityPercent, 0.01)
 
 		// Prot Activity: 68.0 - 90.0 = -22.0
 		assert.InDelta(t, -22.0, progress.ActBlockDiff.Prot.ActivityDelta, 0.01)
@@ -633,11 +633,11 @@ func TestDiffCalculator_CalculateGroupProgress(t *testing.T) {
 		// Preintentional: ((45-50)/50)*100 = -10%
 		assert.InDelta(t, -10.0, progress.LanguageLevels.Preintentional.ActivityPercent, 0.01)
 		// Protolanguage: ((25-30)/30)*100 = -16.67%
-		assert.InDelta(t, -16.67, progress.LanguageLevels.Protolanguage.ActivityPercent, 0.01)
+		assert.InDelta(t, -16.7, progress.LanguageLevels.Protolanguage.ActivityPercent, 0.01)
 		// Holophrase: ((35-40)/40)*100 = -12.5%
 		assert.InDelta(t, -12.5, progress.LanguageLevels.Holophrase.ActivityPercent, 0.01)
 		// Phrase: ((55-60)/60)*100 = -8.33%
-		assert.InDelta(t, -8.33, progress.LanguageLevels.Phrase.ActivityPercent, 0.01)
+		assert.InDelta(t, -8.3, progress.LanguageLevels.Phrase.ActivityPercent, 0.01)
 
 		// Prot Activity: 60.0 - 90.0 = -30.0
 		assert.InDelta(t, -30.0, progress.ActBlockDiff.Prot.ActivityDelta, 0.01)
