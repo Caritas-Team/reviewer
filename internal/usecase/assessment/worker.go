@@ -100,9 +100,11 @@ func (w *Worker) handle(ctx context.Context, pairs []model.StudentPair) {
 	var groupAverages []GroupAverage
 	var groupProgress []GroupProgress
 	var groupDiff []GroupVocabularyProgress
+	var groupErr error
 
 	if len(pairs) > 1 {
 		if err := w.validateGroupDates(pairs); err != nil {
+			groupErr = err
 			w.log.Error("групповой анализ невозможен: некорректные даты", "error", err)
 		} else {
 			// Рассчитываем средние значения по группе
@@ -114,7 +116,7 @@ func (w *Worker) handle(ctx context.Context, pairs []model.StudentPair) {
 			groupDiff = w.calculateGroupVocabularyProgress(pairs)
 		}
 	}
-	_ = w.storage.Set(ctx, requestID, &ProcessingResult{
+	res := &ProcessingResult{
 		Status:            "completed",
 		ProgressPercent:   100,
 		ProcessedStudents: total,
@@ -123,7 +125,12 @@ func (w *Worker) handle(ctx context.Context, pairs []model.StudentPair) {
 		GroupAverages:     groupAverages,
 		GroupProgress:     groupProgress,
 		GroupDiff:         groupDiff,
-	}, w.ttl)
+	}
+
+	if groupErr != nil {
+		res.Error = groupErr.Error()
+	}
+	_ = w.storage.Set(ctx, requestID, res, w.ttl)
 }
 
 // calculateGroupAverages группирует документы по датам и вычисляет средние
