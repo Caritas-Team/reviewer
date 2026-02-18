@@ -92,7 +92,7 @@ func (p *DocumentParser) Parse(r io.Reader, filename string) (*model.AssessmentD
 		{fullRawData.ActBlock18, "actBlock18"},
 	}
 	doc.OtherActBlocks = make(map[string]model.ActBlockOtherRaw)
-
+	doc.OtherActBlocks["actBlock01"] = filterActBlock01(fullRawData.ActBlock01)
 	for _, b := range otherBlocks {
 		filtered := filterActBlockOther(b.block)
 		doc.OtherActBlocks[b.id] = filtered
@@ -166,15 +166,22 @@ type DiagramBlock struct {
 }
 
 type ActBlock01 struct {
-	ProtSforProcElem  string `json:"protSforProcElem"`
-	ProtInitProcElem  string `json:"protInitProcElem"`
-	ProtChastProcElem string `json:"protChastProcElem"`
-	GolSforProcElem   string `json:"golSforProcElem"`
-	GolInitProcElem   string `json:"golInitProcElem"`
-	GolChastProcElem  string `json:"golChastProcElem"`
-	FraSforProcElem   string `json:"fraSforProcElem"`
-	FraInitProcElem   string `json:"fraInitProcElem"`
-	FraChastProcElem  string `json:"fraChastProcElem"`
+	ProtSforProcElem   string `json:"protSforProcElem"`
+	ProtInitProcElem   string `json:"protInitProcElem"`
+	ProtChastProcElem  string `json:"protChastProcElem"`
+	GolSforProcElem    string `json:"golSforProcElem"`
+	GolInitProcElem    string `json:"golInitProcElem"`
+	GolChastProcElem   string `json:"golChastProcElem"`
+	FraSforProcElem    string `json:"fraSforProcElem"`
+	FraInitProcElem    string `json:"fraInitProcElem"`
+	FraChastProcElem   string `json:"fraChastProcElem"`
+	BodyBlockElem      string `json:"bodyBlockElem"`
+	UnavailableTagElem string `json:"unavailableTagElem"`
+	ProtUnElem         string `json:"protUnElem"`
+	ProtOverElem       string `json:"protOverElem"`
+	GolUnElem          string `json:"golUnElem"`
+	GolOverElem        string `json:"golOverElem"`
+	FraUnElem          string `json:"fraUnElem"`
 }
 
 type ActBlockOther struct {
@@ -417,6 +424,52 @@ func (p *DocumentParser) parseActBlockData(raw *FullRawJSON, doc *model.Assessme
 }
 
 func filterActBlockOther(block ActBlockOther) model.ActBlockOtherRaw {
+	filtered := model.ActBlockOtherRaw{}
+
+	if block.BodyBlockElem == "hidden" {
+		filtered.BodyBlockElem = block.BodyBlockElem
+	}
+	if block.UnavailableTagElem == "shown" {
+		filtered.UnavailableTagElem = block.UnavailableTagElem
+	}
+	if block.ProtUnElem == "shown" {
+		filtered.ProtUnElem = block.ProtUnElem
+	}
+	if block.ProtOverElem == "shown" {
+		filtered.ProtOverElem = block.ProtOverElem
+	}
+	if block.ProtSforProcElem != "" {
+		filtered.ProtSforProcElem = block.ProtSforProcElem
+	}
+	if block.ProtInitProcElem != "" {
+		filtered.ProtInitProcElem = block.ProtInitProcElem
+	}
+	if block.GolUnElem == "shown" {
+		filtered.GolUnElem = block.GolUnElem
+	}
+	if block.GolOverElem == "shown" {
+		filtered.GolOverElem = block.GolOverElem
+	}
+	if block.GolSforProcElem != "" {
+		filtered.GolSforProcElem = block.GolSforProcElem
+	}
+	if block.GolInitProcElem != "" {
+		filtered.GolInitProcElem = block.GolInitProcElem
+	}
+	if block.FraUnElem == "shown" {
+		filtered.FraUnElem = block.FraUnElem
+	}
+	if block.FraSforProcElem != "" {
+		filtered.FraSforProcElem = block.FraSforProcElem
+	}
+	if block.FraInitProcElem != "" {
+		filtered.FraInitProcElem = block.FraInitProcElem
+	}
+
+	return filtered
+}
+
+func filterActBlock01(block ActBlock01) model.ActBlockOtherRaw {
 	filtered := model.ActBlockOtherRaw{}
 
 	if block.BodyBlockElem == "hidden" {
