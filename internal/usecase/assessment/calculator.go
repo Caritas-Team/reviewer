@@ -164,7 +164,7 @@ func (dc *DiffCalculator) Calculate(before, after *model.AssessmentDocument) (As
 			OtherActBlocks: after.OtherActBlocks,
 		},
 		FastMessages: after.FastMessages,
-		NewWords:     mergeSlices(after.ActiveWords, after.VerbalWords, after.AdditionalWords),
+		NewWords:     after.ActiveWords,
 	}
 
 	// 1. Сравнение уровней языкового развития
@@ -179,7 +179,7 @@ func (dc *DiffCalculator) Calculate(before, after *model.AssessmentDocument) (As
 	// 4. Общий прогресс
 	diff.GeneralProgress.AverageProgress = dc.avg(diff.LangDevDiff, diff.CommFuncsDiff)
 
-	/*beforeCounts := before.CommunicationCounts
+	beforeCounts := before.CommunicationCounts
 	afterCounts := after.CommunicationCounts
 	diffCounts := make(map[string]int)
 	categories := []string{"first", "second", "third", "fourth"}
@@ -193,8 +193,8 @@ func (dc *DiffCalculator) Calculate(before, after *model.AssessmentDocument) (As
 			afterVal = afterCounts[cat]
 		}
 		diffCounts[cat] = afterVal - beforeVal
-	}*/
-	diff.CommunicationCounts = after.CommunicationCounts
+	}
+	diff.CommunicationCounts = diffCounts
 
 	return diff, nil
 }
@@ -565,14 +565,14 @@ func roundToOneDecimal(v float64) float64 {
 	return math.Round(v*10) / 10
 }
 
-func mergeSlices(slices ...[]string) []string {
-	total := 0
-	for _, s := range slices {
-		total += len(s)
-	}
-	result := make([]string, 0, total)
-	for _, s := range slices {
-		result = append(result, s...)
-	}
-	return result
-}
+//func mergeSlices(slices ...[]string) []string {
+//	total := 0
+//	for _, s := range slices {
+//		total += len(s)
+//	}
+//	result := make([]string, 0, total)
+//	for _, s := range slices {
+//		result = append(result, s...)
+//	}
+//	return result
+//}
