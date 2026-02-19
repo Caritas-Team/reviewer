@@ -333,11 +333,14 @@ func (p *DocumentParser) parseCommunicativeFunctions(raw *FullRawJSON, funcs *mo
 func (p *DocumentParser) parseVocabulary(raw *FullRawJSON, vocab *model.VocabularyData, doc *model.AssessmentDocument) error {
 	// Подсчитываем активные слова (itemOffStyle == "")
 	activeWordsCount := 0
+	activeWords := []string{}
 	for _, item := range raw.BasicDictionary {
 		if item.ItemOffStyle == "" {
 			activeWordsCount++
+			activeWords = append(activeWords, item.Content)
 		}
 	}
+	doc.ActiveWords = activeWords
 
 	// Подсчет дополнительных слов из dictBasicMore
 	additionalWords := make([]string, 0)
@@ -371,14 +374,6 @@ func (p *DocumentParser) parseVocabulary(raw *FullRawJSON, vocab *model.Vocabula
 	vocab.TotalWordsCount = activeWordsCount + len(additionalWords) + verbalWordsCount
 	vocab.CommunicationWays = communicationWays
 	vocab.VerbalWordsCount = verbalWordsCount
-
-	activeWords := []string{}
-	for _, item := range raw.BasicDictionary {
-		for item.ItemOffStyle == "" {
-			activeWords = append(activeWords, strings.TrimSpace(item.Content))
-		}
-	}
-	doc.ActiveWords = activeWords
 
 	verbalWords := []string{}
 	for _, word := range raw.DictWerbSlov {
