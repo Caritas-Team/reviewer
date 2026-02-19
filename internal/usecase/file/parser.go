@@ -68,7 +68,7 @@ func (p *DocumentParser) Parse(r io.Reader, filename string) (*model.AssessmentD
 	}
 
 	// Парсим словарный запас
-	if err := p.parseVocabulary(&fullRawData, &doc.Vocabulary); err != nil {
+	if err := p.parseVocabulary(&fullRawData, &doc.Vocabulary, doc); err != nil {
 		return nil, fmt.Errorf("не удалось разобрать словарный запас: %w", err)
 	}
 	// Парсим actBlock01 данные
@@ -92,9 +92,9 @@ func (p *DocumentParser) Parse(r io.Reader, filename string) (*model.AssessmentD
 		{fullRawData.ActBlock18, "actBlock18"},
 	}
 	doc.OtherActBlocks = make(map[string]model.ActBlockOtherRaw)
-	doc.OtherActBlocks["actBlock01"] = filterActBlock01(fullRawData.ActBlock01)
+	doc.OtherActBlocks["actBlock01"] = convertActBlock01(fullRawData.ActBlock01)
 	for _, b := range otherBlocks {
-		filtered := filterActBlockOther(b.block)
+		filtered := convertActBlockOther(b.block)
 		doc.OtherActBlocks[b.id] = filtered
 	}
 
@@ -238,6 +238,7 @@ type FullRawJSON struct {
 
 type BasicDictionaryItem struct {
 	ItemOffStyle string `json:"itemOffStyle"`
+	Content      string `json:"content"`
 }
 
 // parseLanguageLevels парсит уровни языкового развития
@@ -329,14 +330,17 @@ func (p *DocumentParser) parseCommunicativeFunctions(raw *FullRawJSON, funcs *mo
 }
 
 // parseVocabulary парсит словарный запас
-func (p *DocumentParser) parseVocabulary(raw *FullRawJSON, vocab *model.VocabularyData) error {
+func (p *DocumentParser) parseVocabulary(raw *FullRawJSON, vocab *model.VocabularyData, doc *model.AssessmentDocument) error {
 	// Подсчитываем активные слова (itemOffStyle == "")
 	activeWordsCount := 0
+	activeWords := []string{}
 	for _, item := range raw.BasicDictionary {
 		if item.ItemOffStyle == "" {
 			activeWordsCount++
+			activeWords = append(activeWords, item.Content)
 		}
 	}
+	doc.ActiveWords = activeWords
 
 	// Подсчет дополнительных слов из dictBasicMore
 	additionalWords := make([]string, 0)
@@ -370,6 +374,18 @@ func (p *DocumentParser) parseVocabulary(raw *FullRawJSON, vocab *model.Vocabula
 	vocab.TotalWordsCount = activeWordsCount + len(additionalWords) + verbalWordsCount
 	vocab.CommunicationWays = communicationWays
 	vocab.VerbalWordsCount = verbalWordsCount
+
+	verbalWords := []string{}
+	for _, word := range raw.DictWerbSlov {
+		trimmedWord := strings.TrimSpace(word)
+		if trimmedWord != "" {
+			verbalWords = append(verbalWords, trimmedWord)
+		}
+	}
+	doc.VerbalWords = verbalWords
+	doc.AdditionalWords = additionalWords
+
+	doc.FastMessages = raw.DictBystrSoobsh
 
 	return nil
 }
@@ -423,94 +439,38 @@ func (p *DocumentParser) parseActBlockData(raw *FullRawJSON, doc *model.Assessme
 	doc.ActBlock.Fra.FrequencyPercent = parsePercentStr(raw.ActBlock01.FraChastProcElem)
 }
 
-func filterActBlockOther(block ActBlockOther) model.ActBlockOtherRaw {
-	filtered := model.ActBlockOtherRaw{}
-
-	if block.BodyBlockElem == "hidden" {
-		filtered.BodyBlockElem = block.BodyBlockElem
+func convertActBlockOther(block ActBlockOther) model.ActBlockOtherRaw {
+	return model.ActBlockOtherRaw{
+		BodyBlockElem:      block.BodyBlockElem,
+		UnavailableTagElem: block.UnavailableTagElem,
+		ProtUnElem:         block.ProtUnElem,
+		ProtOverElem:       block.ProtOverElem,
+		ProtSforProcElem:   block.ProtSforProcElem,
+		ProtInitProcElem:   block.ProtInitProcElem,
+		GolUnElem:          block.GolUnElem,
+		GolOverElem:        block.GolOverElem,
+		GolSforProcElem:    block.GolSforProcElem,
+		GolInitProcElem:    block.GolInitProcElem,
+		FraUnElem:          block.FraUnElem,
+		FraSforProcElem:    block.FraSforProcElem,
+		FraInitProcElem:    block.FraInitProcElem,
 	}
-	if block.UnavailableTagElem == "shown" {
-		filtered.UnavailableTagElem = block.UnavailableTagElem
-	}
-	if block.ProtUnElem == "shown" {
-		filtered.ProtUnElem = block.ProtUnElem
-	}
-	if block.ProtOverElem == "shown" {
-		filtered.ProtOverElem = block.ProtOverElem
-	}
-	if block.ProtSforProcElem != "" {
-		filtered.ProtSforProcElem = block.ProtSforProcElem
-	}
-	if block.ProtInitProcElem != "" {
-		filtered.ProtInitProcElem = block.ProtInitProcElem
-	}
-	if block.GolUnElem == "shown" {
-		filtered.GolUnElem = block.GolUnElem
-	}
-	if block.GolOverElem == "shown" {
-		filtered.GolOverElem = block.GolOverElem
-	}
-	if block.GolSforProcElem != "" {
-		filtered.GolSforProcElem = block.GolSforProcElem
-	}
-	if block.GolInitProcElem != "" {
-		filtered.GolInitProcElem = block.GolInitProcElem
-	}
-	if block.FraUnElem == "shown" {
-		filtered.FraUnElem = block.FraUnElem
-	}
-	if block.FraSforProcElem != "" {
-		filtered.FraSforProcElem = block.FraSforProcElem
-	}
-	if block.FraInitProcElem != "" {
-		filtered.FraInitProcElem = block.FraInitProcElem
-	}
-
-	return filtered
 }
 
-func filterActBlock01(block ActBlock01) model.ActBlockOtherRaw {
-	filtered := model.ActBlockOtherRaw{}
-
-	if block.BodyBlockElem == "hidden" {
-		filtered.BodyBlockElem = block.BodyBlockElem
+func convertActBlock01(block ActBlock01) model.ActBlockOtherRaw {
+	return model.ActBlockOtherRaw{
+		BodyBlockElem:      block.BodyBlockElem,
+		UnavailableTagElem: block.UnavailableTagElem,
+		ProtUnElem:         block.ProtUnElem,
+		ProtOverElem:       block.ProtOverElem,
+		ProtSforProcElem:   block.ProtSforProcElem,
+		ProtInitProcElem:   block.ProtInitProcElem,
+		GolUnElem:          block.GolUnElem,
+		GolOverElem:        block.GolOverElem,
+		GolSforProcElem:    block.GolSforProcElem,
+		GolInitProcElem:    block.GolInitProcElem,
+		FraUnElem:          block.FraUnElem,
+		FraSforProcElem:    block.FraSforProcElem,
+		FraInitProcElem:    block.FraInitProcElem,
 	}
-	if block.UnavailableTagElem == "shown" {
-		filtered.UnavailableTagElem = block.UnavailableTagElem
-	}
-	if block.ProtUnElem == "shown" {
-		filtered.ProtUnElem = block.ProtUnElem
-	}
-	if block.ProtOverElem == "shown" {
-		filtered.ProtOverElem = block.ProtOverElem
-	}
-	if block.ProtSforProcElem != "" {
-		filtered.ProtSforProcElem = block.ProtSforProcElem
-	}
-	if block.ProtInitProcElem != "" {
-		filtered.ProtInitProcElem = block.ProtInitProcElem
-	}
-	if block.GolUnElem == "shown" {
-		filtered.GolUnElem = block.GolUnElem
-	}
-	if block.GolOverElem == "shown" {
-		filtered.GolOverElem = block.GolOverElem
-	}
-	if block.GolSforProcElem != "" {
-		filtered.GolSforProcElem = block.GolSforProcElem
-	}
-	if block.GolInitProcElem != "" {
-		filtered.GolInitProcElem = block.GolInitProcElem
-	}
-	if block.FraUnElem == "shown" {
-		filtered.FraUnElem = block.FraUnElem
-	}
-	if block.FraSforProcElem != "" {
-		filtered.FraSforProcElem = block.FraSforProcElem
-	}
-	if block.FraInitProcElem != "" {
-		filtered.FraInitProcElem = block.FraInitProcElem
-	}
-
-	return filtered
 }

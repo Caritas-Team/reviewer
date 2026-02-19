@@ -29,6 +29,7 @@ type AssessmentDiff struct {
 	AfterData  IndividualData `json:"after_data,omitempty"`
 
 	FastMessages        []string       `json:"fast_messages,omitempty"`
+	NewWords            []string       `json:"new_words,omitempty"`
 	CommunicationCounts map[string]int `json:"communication_counts,omitempty"`
 }
 
@@ -162,8 +163,8 @@ func (dc *DiffCalculator) Calculate(before, after *model.AssessmentDocument) (As
 			NewAct04:       after.NewAct04Raw,
 			OtherActBlocks: after.OtherActBlocks,
 		},
-		FastMessages:        after.FastMessages,
-		CommunicationCounts: after.CommunicationCounts,
+		FastMessages: after.FastMessages,
+		NewWords:     mergeSlices(after.ActiveWords, after.VerbalWords, after.AdditionalWords),
 	}
 
 	// 1. Сравнение уровней языкового развития
@@ -177,6 +178,23 @@ func (dc *DiffCalculator) Calculate(before, after *model.AssessmentDocument) (As
 
 	// 4. Общий прогресс
 	diff.GeneralProgress.AverageProgress = dc.avg(diff.LangDevDiff, diff.CommFuncsDiff)
+
+	beforeCounts := before.CommunicationCounts
+	afterCounts := after.CommunicationCounts
+	diffCounts := make(map[string]int)
+	categories := []string{"first", "second", "third", "fourth"}
+	for _, cat := range categories {
+		beforeVal := 0
+		afterVal := 0
+		if beforeCounts != nil {
+			beforeVal = beforeCounts[cat]
+		}
+		if afterCounts != nil {
+			afterVal = afterCounts[cat]
+		}
+		diffCounts[cat] = afterVal - beforeVal
+	}
+	diff.CommunicationCounts = diffCounts
 
 	return diff, nil
 }
@@ -545,4 +563,16 @@ func (dc *DiffCalculator) findCommonCommunicationWays(allWays [][]string) []stri
 
 func roundToOneDecimal(v float64) float64 {
 	return math.Round(v*10) / 10
+}
+
+func mergeSlices(slices ...[]string) []string {
+	total := 0
+	for _, s := range slices {
+		total += len(s)
+	}
+	result := make([]string, 0, total)
+	for _, s := range slices {
+		result = append(result, s...)
+	}
+	return result
 }

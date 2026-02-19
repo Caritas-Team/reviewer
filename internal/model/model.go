@@ -24,6 +24,10 @@ type AssessmentDocument struct {
 	NewAct02Raw string     `json:"newAct02_raw,omitempty"`
 	NewAct03Raw string     `json:"newAct03_raw,omitempty"`
 	NewAct04Raw string     `json:"newAct04_raw,omitempty"`
+
+	ActiveWords     []string `json:"active_words,omitempty"`
+	VerbalWords     []string `json:"verbal_words,omitempty"`
+	AdditionalWords []string `json:"additional_words,omitempty"`
 }
 
 // AssessmentMetadata метаданные оценки
