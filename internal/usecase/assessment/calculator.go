@@ -179,7 +179,7 @@ func (dc *DiffCalculator) Calculate(before, after *model.AssessmentDocument) (As
 	// 4. Общий прогресс
 	diff.GeneralProgress.AverageProgress = dc.avg(diff.LangDevDiff, diff.CommFuncsDiff)
 
-	beforeCounts := before.CommunicationCounts
+	/*beforeCounts := before.CommunicationCounts
 	afterCounts := after.CommunicationCounts
 	diffCounts := make(map[string]int)
 	categories := []string{"first", "second", "third", "fourth"}
@@ -193,8 +193,8 @@ func (dc *DiffCalculator) Calculate(before, after *model.AssessmentDocument) (As
 			afterVal = afterCounts[cat]
 		}
 		diffCounts[cat] = afterVal - beforeVal
-	}
-	diff.CommunicationCounts = diffCounts
+	}*/
+	diff.CommunicationCounts = after.CommunicationCounts
 
 	return diff, nil
 }
