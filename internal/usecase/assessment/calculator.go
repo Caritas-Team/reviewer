@@ -28,7 +28,7 @@ type AssessmentDiff struct {
 	BeforeData IndividualData `json:"before_data,omitempty"`
 	AfterData  IndividualData `json:"after_data,omitempty"`
 
-	FastMessages        []string       `json:"fast_messages,omitempty"`
+	FastMessages        []string       `json:"fast_messages"`
 	NewWords            []string       `json:"new_words,omitempty"`
 	CommunicationCounts map[string]int `json:"communication_counts,omitempty"`
 }
