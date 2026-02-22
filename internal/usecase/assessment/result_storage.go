@@ -24,7 +24,7 @@ type ProcessingResult struct {
 	GroupAverages     []GroupAverage            `json:"group_averages,omitempty"`
 	GroupProgress     []GroupProgress           `json:"group_progress,omitempty"`
 	GroupDiff         []GroupVocabularyProgress `json:"group_diff,omitempty"`
-	Error             any                       `json:"error,omitempty"`
+	Error             string                    `json:"error,omitempty"`
 }
 
 type ResultStorage struct {
